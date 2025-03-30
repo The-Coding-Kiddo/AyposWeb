@@ -1,155 +1,214 @@
-import { useEffect, useState } from 'react';
-import { Box, Paper, Typography, Fade, useTheme, Grid, AppBar, Toolbar } from '@mui/material';
-import Plot from 'react-plotly.js';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Box, Paper, Typography, Fade, useTheme, Grid, AppBar, Toolbar, CircularProgress, IconButton, Tooltip } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, 
+  Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
+  Brush, ReferenceLine
+} from 'recharts';
+
+// Extend the Window interface to include Google Charts
+declare global {
+  interface Window {
+    google?: {
+      charts?: any;
+    };
+  }
+}
 
 interface ChartData {
   power: string;
+  flag: string;
   env_temp_cur: string;
   now_timestamp: string;
   future_timestamp: string;
-  env_temp_15min: string;
-  power_future_15min: string;
+  env_temp_min: string;
+  power_future_min: string;
+}
+
+// Define processed data format for Recharts
+interface ProcessedChartPoint {
+  timestamp: number;
+  timeLabel: string;
+  currentPower?: number;
+  predictedPower?: number;
+  currentTemp?: number;
+  predictedTemp?: number;
 }
 
 const Temperature = () => {
   const theme = useTheme();
   const [data, setData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Use refs to keep track of the interval
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const updateIntervalMs = 10000; // 10 seconds refresh rate
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('http://141.196.83.136:8003/prom/get_chart_data/temperature/20');
-        const result = await response.json();
-        
-        if (result.data && result.data.length > 0) {
-          const last20Data = result.data.slice(-20);
-          setData(last20Data);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
+  // Create a memoized fetchData function with useCallback
+  const fetchData = useCallback(async (showLoadingIndicator = false) => {
+    try {
+      if (showLoadingIndicator) {
+        setRefreshing(true);
       }
-    };
-
-    // Initial fetch
-    fetchData();
-    
-    // Set up interval
-    const intervalId = setInterval(fetchData, 60000);
-    return () => clearInterval(intervalId);
+      
+      const response = await fetch('http://141.196.83.136:8003/prom/get_chart_data/temperature');
+      const result = await response.json();
+      
+      if (result.data && result.data.length > 0) {
+        // Filter valid data points
+        const validData = result.data.filter((item: any) => 
+          item.now_timestamp && 
+          item.future_timestamp && 
+          item.power && 
+          item.power_future_min &&
+          item.env_temp_cur && 
+          item.env_temp_min
+        );
+        
+        // Sort by timestamp
+        const sortedData = [...validData].sort((a, b) => 
+          new Date(a.now_timestamp).getTime() - new Date(b.now_timestamp).getTime()
+        );
+        
+        // Limit to last 20 records
+        const last20Data = sortedData.slice(-20);
+        
+        console.log(`Data updated at ${new Date().toLocaleTimeString()}:`, last20Data);
+        setData(last20Data);
+        setLastUpdated(new Date());
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
-  const commonConfig = {
-    responsive: true,
-    displayModeBar: true,
-    displaylogo: false,
-    modeBarButtonsToRemove: ['lasso2d', 'select2d'],
-    toImageButtonOptions: {
-      format: 'png',
-      filename: 'temperature_charts',
-      height: 1000,
-      width: 1500,
-      scale: 2
-    }
+  // Manual refresh handler
+  const handleRefresh = () => {
+    fetchData(true);
   };
 
-  const commonLayoutSettings = {
-    showlegend: true,
-    legend: {
-      orientation: 'h',
-      y: -0.2,
-      x: 0.5,
-      xanchor: 'center',
-      yanchor: 'top',
-      font: {
-        size: 12,
-        family: theme.typography.fontFamily,
-        color: theme.palette.text.secondary
-      },
-      bgcolor: 'rgba(255, 255, 255, 0)',
-      bordercolor: 'rgba(255, 255, 255, 0)'
-    },
-    margin: { t: 60, b: 100, l: 60, r: 20 },
-    plot_bgcolor: 'rgba(0,0,0,0)',
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    hovermode: 'closest',
-    xaxis: { 
-      title: {
-        text: 'Time',
-        font: {
-          size: 14,
-          color: theme.palette.text.secondary,
-          family: theme.typography.fontFamily
-        }
-      },
-      type: 'date',
-      gridcolor: theme.palette.divider,
-      tickfont: {
-        size: 12,
-        family: theme.typography.fontFamily,
-        color: theme.palette.text.secondary
+  // Set up the interval for real-time updates
+  useEffect(() => {
+    // Initial fetch
+    fetchData(true);
+    
+    // Set up interval for auto-refresh
+    intervalRef.current = setInterval(() => {
+      console.log(`Auto-refreshing data at ${new Date().toLocaleTimeString()}`);
+      fetchData(false);
+    }, updateIntervalMs);
+    
+    // Cleanup function to clear the interval when component unmounts
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
-    }
-  };
+    };
+  }, [fetchData]);
 
-  const powerLayout = {
-    ...commonLayoutSettings,
-    title: {
-      text: 'Power Consumption ',
-      font: {
-        size: 20,
-        color: theme.palette.text.primary,
-        family: theme.typography.fontFamily,
-        weight: 400
-      }
-    },
-    yaxis: { 
-      title: {
-        text: 'Power (W)',
-        font: {
-          size: 14,
-          color: theme.palette.text.secondary,
-          family: theme.typography.fontFamily
-        }
-      },
-      gridcolor: theme.palette.divider,
-      tickfont: {
-        size: 12,
-        family: theme.typography.fontFamily,
-        color: theme.palette.text.secondary
-      }
+  // Process data for recharts - combined function that handles both temperature and power
+  const prepareChartData = (): ProcessedChartPoint[] => {
+    if (!data || data.length === 0) {
+      return [];
     }
-  };
 
-  const tempLayout = {
-    ...commonLayoutSettings,
-    title: {
-      text: 'Environmental Temperature  ',
-      font: {
-        size: 20,
-        color: theme.palette.text.primary,
-        family: theme.typography.fontFamily,
-        weight: 400
-      }
-    },
-    yaxis: { 
-      title: {
-        text: 'Temperature (°C)',
-        font: {
-          size: 14,
-          color: theme.palette.text.secondary,
-          family: theme.typography.fontFamily
-        }
-      },
-      gridcolor: theme.palette.divider,
-      tickfont: {
-        size: 12,
-        family: theme.typography.fontFamily,
-        color: theme.palette.text.secondary
-      }
+    // Create a map to store combined data points by timestamp
+    const dataMap = new Map<number, ProcessedChartPoint>();
+    
+    // Process current data points
+    data.forEach(item => {
+      const timestamp = new Date(item.now_timestamp).getTime();
+      const formattedTime = new Date(timestamp).toLocaleTimeString();
+      
+      // Initialize or get existing data point
+      const dataPoint = dataMap.get(timestamp) || {
+        timestamp,
+        timeLabel: formattedTime
+      };
+      
+      // Add current values
+      dataPoint.currentPower = parseFloat(item.power);
+      dataPoint.currentTemp = parseFloat(item.env_temp_cur);
+      
+      // Save to map
+      dataMap.set(timestamp, dataPoint);
+    });
+    
+    // Process future/predicted data points
+    data.forEach(item => {
+      const timestamp = new Date(item.future_timestamp).getTime();
+      const formattedTime = new Date(timestamp).toLocaleTimeString();
+      
+      // Initialize or get existing data point
+      const dataPoint = dataMap.get(timestamp) || {
+        timestamp,
+        timeLabel: formattedTime
+      };
+      
+      // Add predicted values
+      dataPoint.predictedPower = parseFloat(item.power_future_min);
+      dataPoint.predictedTemp = parseFloat(item.env_temp_min);
+      
+      // Save to map
+      dataMap.set(timestamp, dataPoint);
+    });
+    
+    // Convert map to array and sort by timestamp
+    return Array.from(dataMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+  };
+  
+  // Format the chart data
+  const chartData = prepareChartData();
+  
+  // Find current time to display a marker between current and predicted data
+  const nowTimestamp = data.length > 0 
+    ? Math.max(...data.map(item => new Date(item.now_timestamp).getTime())) 
+    : null;
+
+  // Custom tooltip formatter for Recharts
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            p: 1.5,
+            bgcolor: 'rgba(255, 255, 255, 0.9)',
+            border: `1px solid ${theme.palette.divider}`
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            {label}
+          </Typography>
+          {payload.map((entry: any, index: number) => (
+            <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+              <Box
+                component="span"
+                sx={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  backgroundColor: entry.color,
+                  display: 'inline-block',
+                  mr: 1
+                }}
+              />
+              <Typography variant="body2" color="text.secondary">
+                {entry.name}: {entry.value.toFixed(2)} {entry.unit}
+              </Typography>
+            </Box>
+          ))}
+        </Paper>
+      );
     }
+    return null;
   };
 
   return (
@@ -175,8 +234,35 @@ const Temperature = () => {
               letterSpacing: '-0.5px'
             }}
           >
-            Environmental Temperature
+            Environmental Temperature & Power Monitoring (Last 20 Records)
           </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {lastUpdated && (
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}
+              >
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </Typography>
+            )}
+            <Tooltip title="Refresh data">
+              <IconButton 
+                onClick={handleRefresh} 
+                color="primary" 
+                disabled={loading || refreshing}
+                sx={{ 
+                  animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' }
+                  }
+                }}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Toolbar>
       </AppBar>
 
@@ -192,37 +278,123 @@ const Temperature = () => {
                   bgcolor: 'background.paper',
                   borderRadius: 2,
                   border: `1px solid ${theme.palette.divider}`,
-                  height: '100%'
+                  height: '100%',
+                  position: 'relative'
                 }}
               >
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    mb: 2, 
+                    color: theme.palette.text.primary, 
+                    fontWeight: 500 
+                  }}
+                >
+                  Power Consumption
+                </Typography>
+                
+                {refreshing && (
+                  <Box 
+                    sx={{ 
+                      position: 'absolute', 
+                      top: 10, 
+                      right: 10, 
+                      zIndex: 10,
+                      bgcolor: 'rgba(255,255,255,0.8)',
+                      borderRadius: '50%',
+                      p: 0.5
+                    }}
+                  >
+                    <CircularProgress size={24} thickness={5} />
+                  </Box>
+                )}
+                
                 {loading ? (
-                  <Typography>Loading...</Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+                    <CircularProgress size={40} thickness={4} />
+                    <Typography variant="h6" sx={{ ml: 2 }} color="text.secondary">
+                      Loading power data...
+                    </Typography>
+                  </Box>
+                ) : chartData.length === 0 ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+                    <Typography variant="h6" color="text.secondary">No power data available</Typography>
+                  </Box>
                 ) : (
-                  <Plot
-                    data={[
-                      {
-                        x: data.map(item => item.now_timestamp),
-                        y: data.map(item => parseFloat(item.power)),
-                        type: 'scatter',
-                        mode: 'lines+markers',
-                        name: 'Current Power',
-                        line: { color: '#1976d2', width: 2 },
-                        marker: { size: 6 }
-                      },
-                      {
-                        x: data.map(item => item.future_timestamp),
-                        y: data.map(item => parseFloat(item.power_future_15min)),
-                        type: 'scatter',
-                        mode: 'lines+markers',
-                        name: 'Predicted Power',
-                        line: { color: '#4caf50', width: 2, dash: 'dash' },
-                        marker: { size: 6 }
-                      }
-                    ]}
-                    layout={powerLayout}
-                    config={commonConfig}
-                    style={{ width: '100%', height: '400px' }}
-                  />
+                  <ResponsiveContainer width="100%" height={400}>
+                    <LineChart
+                      data={chartData}
+                      margin={{ top: 10, right: 30, left: 10, bottom: 55 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                      <XAxis 
+                        dataKey="timeLabel" 
+                        stroke={theme.palette.text.secondary} 
+                        angle={-45}
+                        textAnchor="end"
+                        tick={{ fontSize: 12 }}
+                        tickMargin={10}
+                      />
+                      <YAxis 
+                        stroke={theme.palette.text.secondary}
+                        label={{ 
+                          value: 'Power (W)', 
+                          angle: -90, 
+                          position: 'insideLeft',
+                          style: { textAnchor: 'middle', fill: theme.palette.text.secondary }
+                        }}
+                      />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Legend 
+                        verticalAlign="bottom" 
+                        height={36}
+                        wrapperStyle={{ paddingTop: '10px' }}
+                      />
+                      {nowTimestamp && (
+                        <ReferenceLine 
+                          x={chartData.find(item => item.timestamp === nowTimestamp)?.timeLabel} 
+                          stroke="#ff7300" 
+                          label={{ 
+                            value: "Now", 
+                            position: "top", 
+                            fill: "#ff7300",
+                            fontSize: 12
+                          }} 
+                        />
+                      )}
+                      <Line
+                        type="monotone"
+                        name="Current Power"
+                        dataKey="currentPower"
+                        stroke={theme.palette.primary.main}
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
+                        unit="W"
+                        connectNulls
+                      />
+                      <Line
+                        type="monotone"
+                        name="Predicted Power"
+                        dataKey="predictedPower"
+                        stroke={theme.palette.success.main}
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
+                        unit="W"
+                        connectNulls
+                      />
+                      <Brush 
+                        dataKey="timeLabel" 
+                        height={30} 
+                        stroke={theme.palette.primary.light}
+                        y={365}
+                        travellerWidth={10}
+                        fill={theme.palette.background.paper}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 )}
               </Paper>
             </Grid>
@@ -236,37 +408,123 @@ const Temperature = () => {
                   bgcolor: 'background.paper',
                   borderRadius: 2,
                   border: `1px solid ${theme.palette.divider}`,
-                  height: '100%'
+                  height: '100%',
+                  position: 'relative'
                 }}
               >
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    mb: 2, 
+                    color: theme.palette.text.primary, 
+                    fontWeight: 500 
+                  }}
+                >
+                  Environmental Temperature
+                </Typography>
+                
+                {refreshing && (
+                  <Box 
+                    sx={{ 
+                      position: 'absolute', 
+                      top: 10, 
+                      right: 10, 
+                      zIndex: 10,
+                      bgcolor: 'rgba(255,255,255,0.8)',
+                      borderRadius: '50%',
+                      p: 0.5
+                    }}
+                  >
+                    <CircularProgress size={24} thickness={5} />
+                  </Box>
+                )}
+                
                 {loading ? (
-                  <Typography>Loading...</Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+                    <CircularProgress size={40} thickness={4} />
+                    <Typography variant="h6" sx={{ ml: 2 }} color="text.secondary">
+                      Loading temperature data...
+                    </Typography>
+                  </Box>
+                ) : chartData.length === 0 ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+                    <Typography variant="h6" color="text.secondary">No temperature data available</Typography>
+                  </Box>
                 ) : (
-                  <Plot
-                    data={[
-                      {
-                        x: data.map(item => item.now_timestamp),
-                        y: data.map(item => parseFloat(item.env_temp_cur)),
-                        type: 'scatter',
-                        mode: 'lines+markers',
-                        name: 'Current Temperature',
-                        line: { color: '#ff9800', width: 2 },
-                        marker: { size: 6 }
-                      },
-                      {
-                        x: data.map(item => item.future_timestamp),
-                        y: data.map(item => parseFloat(item.env_temp_15min)),
-                        type: 'scatter',
-                        mode: 'lines+markers',
-                        name: 'Predicted Temperature',
-                        line: { color: '#f44336', width: 2, dash: 'dash' },
-                        marker: { size: 6 }
-                      }
-                    ]}
-                    layout={tempLayout}
-                    config={commonConfig}
-                    style={{ width: '100%', height: '400px' }}
-                  />
+                  <ResponsiveContainer width="100%" height={400}>
+                    <LineChart
+                      data={chartData}
+                      margin={{ top: 10, right: 30, left: 10, bottom: 55 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                      <XAxis 
+                        dataKey="timeLabel" 
+                        stroke={theme.palette.text.secondary} 
+                        angle={-45}
+                        textAnchor="end"
+                        tick={{ fontSize: 12 }}
+                        tickMargin={10}
+                      />
+                      <YAxis 
+                        stroke={theme.palette.text.secondary}
+                        label={{ 
+                          value: 'Temperature (°C)', 
+                          angle: -90, 
+                          position: 'insideLeft',
+                          style: { textAnchor: 'middle', fill: theme.palette.text.secondary }
+                        }}
+                      />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Legend 
+                        verticalAlign="bottom" 
+                        height={36}
+                        wrapperStyle={{ paddingTop: '10px' }}
+                      />
+                      {nowTimestamp && (
+                        <ReferenceLine 
+                          x={chartData.find(item => item.timestamp === nowTimestamp)?.timeLabel} 
+                          stroke="#ff7300" 
+                          label={{ 
+                            value: "Now", 
+                            position: "top", 
+                            fill: "#ff7300",
+                            fontSize: 12
+                          }} 
+                        />
+                      )}
+                      <Line
+                        type="monotone"
+                        name="Current Temperature"
+                        dataKey="currentTemp"
+                        stroke={theme.palette.primary.main}
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
+                        unit="°C"
+                        connectNulls
+                      />
+                      <Line
+                        type="monotone"
+                        name="Predicted Temperature"
+                        dataKey="predictedTemp"
+                        stroke={theme.palette.success.main}
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
+                        unit="°C"
+                        connectNulls
+                      />
+                      <Brush 
+                        dataKey="timeLabel" 
+                        height={30} 
+                        stroke={theme.palette.primary.light}
+                        y={365}
+                        travellerWidth={10}
+                        fill={theme.palette.background.paper}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 )}
               </Paper>
             </Grid>

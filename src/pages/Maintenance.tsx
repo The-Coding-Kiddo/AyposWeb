@@ -1,13 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Box, Paper, Typography, Fade, useTheme, Grid, useMediaQuery, AppBar, Toolbar } from '@mui/material';
+import { Box, Paper, Typography, Fade, useTheme, AppBar, Toolbar } from '@mui/material';
 import Plot from 'react-plotly.js';
+import { Layout, PlotData } from 'plotly.js';
+
+interface DataItem {
+  now_timestamp: string;
+  future_timestamp: string;
+  power: string;
+  power_future_15min: string;
+  positive_3p: string;
+  negative_3p: string;
+  positive_7p: string;
+  negative_7p: string;
+}
 
 const Maintenance = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const [currentPower, setCurrentPower] = useState(0);
-  const [chartData, setChartData] = useState([]);
+  const [chartData, setChartData] = useState<Partial<PlotData>[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -16,61 +26,58 @@ const Maintenance = () => {
         const result = await response.json();
         
         if (result.data && result.data.length > 0) {
-          const latestData = result.data[result.data.length - 1];
-          setCurrentPower(parseFloat(latestData.power));
-
           const last20Data = result.data.slice(-20);
-          const traces = [
+          const traces: Partial<PlotData>[] = [
             {
-              x: last20Data.map(item => item.now_timestamp),
-              y: last20Data.map(item => parseFloat(item.power)),
-              type: 'scatter',
-              mode: 'lines+markers',
+              x: last20Data.map((item: DataItem) => item.now_timestamp),
+              y: last20Data.map((item: DataItem) => parseFloat(item.power)),
+              type: 'scatter' as const,
+              mode: 'lines+markers' as const,
               name: 'Current Power',
-              line: { color: '#1f77b4', width: 2 },
-              marker: { size: 6, symbol: 'circle' },
+              line: { color: '#2196f3', width: 2 },
+              marker: { size: 6, symbol: 'circle' }
             },
             {
-              x: last20Data.map(item => item.future_timestamp),
-              y: last20Data.map(item => parseFloat(item.power_future_15min)),
-              type: 'scatter',
-              mode: 'lines+markers',
-              name: 'Predicted Power (15min)',
-              line: { color: '#ff7f0e', width: 2, dash: 'dash' },
-              marker: { size: 6, symbol: 'circle' },
+              x: last20Data.map((item: DataItem) => item.future_timestamp),
+              y: last20Data.map((item: DataItem) => parseFloat(item.power_future_15min)),
+              type: 'scatter' as const,
+              mode: 'lines+markers' as const,
+              name: 'Predicted (15min)',
+              line: { color: '#4caf50', width: 2, dash: 'dot' },
+              marker: { size: 6, symbol: 'circle' }
             },
             {
-              x: last20Data.map(item => item.future_timestamp),
-              y: last20Data.map(item => parseFloat(item.positive_3p)),
-              type: 'scatter',
-              mode: 'lines',
+              x: last20Data.map((item: DataItem) => item.future_timestamp),
+              y: last20Data.map((item: DataItem) => parseFloat(item.positive_3p)),
+              type: 'scatter' as const,
+              mode: 'lines' as const,
               name: '+3% Positive',
               line: { color: '#2ca02c', width: 1.5 },
               showlegend: true,
             },
             {
-              x: last20Data.map(item => item.future_timestamp),
-              y: last20Data.map(item => parseFloat(item.negative_3p)),
-              type: 'scatter',
-              mode: 'lines',
+              x: last20Data.map((item: DataItem) => item.future_timestamp),
+              y: last20Data.map((item: DataItem) => parseFloat(item.negative_3p)),
+              type: 'scatter' as const,
+              mode: 'lines' as const,
               name: '-3% Negative',
               line: { color: '#d62728', width: 1.5 },
               showlegend: true,
             },
             {
-              x: last20Data.map(item => item.future_timestamp),
-              y: last20Data.map(item => parseFloat(item.positive_7p)),
-              type: 'scatter',
-              mode: 'lines',
+              x: last20Data.map((item: DataItem) => item.future_timestamp),
+              y: last20Data.map((item: DataItem) => parseFloat(item.positive_7p)),
+              type: 'scatter' as const,
+              mode: 'lines' as const,
               name: '+7% Positive',
               line: { color: '#9467bd', width: 1.5 },
               showlegend: true,
             },
             {
-              x: last20Data.map(item => item.future_timestamp),
-              y: last20Data.map(item => parseFloat(item.negative_7p)),
-              type: 'scatter',
-              mode: 'lines',
+              x: last20Data.map((item: DataItem) => item.future_timestamp),
+              y: last20Data.map((item: DataItem) => parseFloat(item.negative_7p)),
+              type: 'scatter' as const,
+              mode: 'lines' as const,
               name: '-7% Negative',
               line: { color: '#8c564b', width: 1.5 },
               showlegend: true,
@@ -88,45 +95,28 @@ const Maintenance = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const layout = {
-
-    xaxis: { 
+  const layout: Partial<Layout> = {
+    xaxis: {
       title: {
         text: 'Time',
-        font: {
-          size: 14,
-          color: theme.palette.text.secondary,
-          family: theme.typography.fontFamily
-        }
+        font: { size: 14, color: '#666', family: undefined }
       },
       type: 'date',
-      gridcolor: theme.palette.divider,
-      tickfont: {
-        size: 12,
-        family: theme.typography.fontFamily,
-        color: theme.palette.text.secondary
-      },
+      gridcolor: '#eee',
+      tickfont: { size: 12, family: undefined, color: '#666' },
       showgrid: true,
       gridwidth: 1
     },
-    yaxis: { 
+    yaxis: {
       title: {
-        text: 'Power Values (W)',
-        font: {
-          size: 14,
-          color: theme.palette.text.secondary,
-          family: theme.typography.fontFamily
-        }
+        text: 'Power (W)',
+        font: { size: 14, color: '#666', family: undefined }
       },
-      rangemode: 'tozero',
-      gridcolor: theme.palette.divider,
-      tickfont: {
-        size: 12,
-        family: theme.typography.fontFamily,
-        color: theme.palette.text.secondary
-      },
+      gridcolor: '#eee',
+      tickfont: { size: 12, family: undefined, color: '#666' },
       showgrid: true,
-      gridwidth: 1
+      gridwidth: 1,
+      rangemode: 'tozero' as const
     },
     showlegend: true,
     legend: {

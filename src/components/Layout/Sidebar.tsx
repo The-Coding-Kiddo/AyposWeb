@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   Box, 
   List, 
@@ -18,11 +17,12 @@ import ThermostatIcon from '@mui/icons-material/Thermostat';
 import BuildIcon from '@mui/icons-material/Build';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import MonitorIcon from '@mui/icons-material/Monitor';
 import bgreenLogo from '../../assets/bgreen-logo.png';
 
 const DRAWER_WIDTH = 240;
 
-const LogoContainer = styled(Box)(({ theme }) => ({
+const LogoContainer = styled(Box)(() => ({
   padding: '20px',
   borderBottom: '1px solid rgba(255,255,255,0.1)',
   background: 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%)',
@@ -31,7 +31,7 @@ const LogoContainer = styled(Box)(({ theme }) => ({
   justifyContent: 'space-between',
 }));
 
-const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
+const StyledListItemButton = styled(ListItemButton)(() => ({
   margin: '4px 8px',
   borderRadius: 4,
   '&.Mui-selected': {
@@ -57,6 +57,7 @@ const menuItems = [
   { text: 'Environmental Temperature', path: '/temperature', icon: <ThermostatIcon /> },
   { text: 'Preventive Maintenance', path: '/maintenance', icon: <BuildIcon /> },
   { text: 'Migration Advice', path: '/migration', icon: <SwapHorizIcon /> },
+  { text: 'Monitoring System', path: '/monitoring-system', icon: <MonitorIcon /> },
 ];
 
 interface SidebarProps {
