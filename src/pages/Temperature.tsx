@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Box, Paper, Typography, Fade, useTheme, Grid, AppBar, Toolbar, CircularProgress, IconButton, Tooltip } from '@mui/material';
+import { Box, Paper, Typography, Fade, useTheme, Grid, AppBar, Toolbar, CircularProgress, IconButton, Tooltip, Chip, Button, Snackbar, Alert } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
-  Brush, ReferenceLine
-} from 'recharts';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+import Plot from 'react-plotly.js';
+import { Layout, PlotData, Config } from 'plotly.js';
 
 // Extend the Window interface to include Google Charts
 declare global {
@@ -16,6 +15,7 @@ declare global {
   }
 }
 
+// Define the structure of our data
 interface ChartData {
   power: string;
   flag: string;
@@ -26,26 +26,24 @@ interface ChartData {
   power_future_min: string;
 }
 
-// Define processed data format for Recharts
-interface ProcessedChartPoint {
-  timestamp: number;
-  timeLabel: string;
-  currentPower?: number;
-  predictedPower?: number;
-  currentTemp?: number;
-  predictedTemp?: number;
-}
-
 const Temperature = () => {
   const theme = useTheme();
   const [data, setData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [decisionLoading, setDecisionLoading] = useState(false);
+  const [powerZoom, setPowerZoom] = useState<{xRange?: [number, number]; yRange?: [number, number]}>({});
+  const [tempZoom, setTempZoom] = useState<{xRange?: [number, number]; yRange?: [number, number]}>({});
+  const [alert, setAlert] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
   
   // Use refs to keep track of the interval
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const updateIntervalMs = 10000; // 10 seconds refresh rate
+  const updateIntervalMs = 5000; // 5 seconds refresh rate
 
   // Create a memoized fetchData function with useCallback
   const fetchData = useCallback(async (showLoadingIndicator = false) => {
@@ -54,12 +52,20 @@ const Temperature = () => {
         setRefreshing(true);
       }
       
-      const response = await fetch('http://141.196.83.136:8003/prom/get_chart_data/temperature');
+      const response = await fetch('http://141.196.83.136:8003/prom/get_chart_data/temperature/20');
       const result = await response.json();
       
       if (result.data && result.data.length > 0) {
+        // Sort by timestamp first to ensure we get the latest data
+        const sortedData = [...result.data].sort((a, b) => 
+          new Date(b.now_timestamp).getTime() - new Date(a.now_timestamp).getTime()
+        );
+        
+        // Log the most recent flag
+        console.log('Most recent flag:', sortedData[0].flag);
+        
         // Filter valid data points
-        const validData = result.data.filter((item: any) => 
+        const validData = sortedData.filter((item: any) => 
           item.now_timestamp && 
           item.future_timestamp && 
           item.power && 
@@ -68,15 +74,18 @@ const Temperature = () => {
           item.env_temp_min
         );
         
-        // Sort by timestamp
-        const sortedData = [...validData].sort((a, b) => 
+        // Limit to last 20 records but maintain chronological order
+        const last20Data = validData.slice(-20).sort((a, b) => 
           new Date(a.now_timestamp).getTime() - new Date(b.now_timestamp).getTime()
         );
         
-        // Limit to last 20 records
-        const last20Data = sortedData.slice(-20);
+        console.log(`Data updated at ${new Date().toLocaleTimeString()}:`, {
+          totalRecords: result.data.length,
+          validRecords: validData.length,
+          displayedRecords: last20Data.length,
+          latestFlag: last20Data[last20Data.length - 1]?.flag
+        });
         
-        console.log(`Data updated at ${new Date().toLocaleTimeString()}:`, last20Data);
         setData(last20Data);
         setLastUpdated(new Date());
       }
@@ -113,102 +122,255 @@ const Temperature = () => {
     };
   }, [fetchData]);
 
-  // Process data for recharts - combined function that handles both temperature and power
-  const prepareChartData = (): ProcessedChartPoint[] => {
-    if (!data || data.length === 0) {
-      return [];
-    }
+  // Process data for Plotly charts
+  const preparePlotlyData = () => {
+    if (!data || data.length === 0) return { powerData: [], tempData: [] };
 
-    // Create a map to store combined data points by timestamp
-    const dataMap = new Map<number, ProcessedChartPoint>();
-    
-    // Process current data points
-    data.forEach(item => {
-      const timestamp = new Date(item.now_timestamp).getTime();
-      const formattedTime = new Date(timestamp).toLocaleTimeString();
-      
-      // Initialize or get existing data point
-      const dataPoint = dataMap.get(timestamp) || {
-        timestamp,
-        timeLabel: formattedTime
-      };
-      
-      // Add current values
-      dataPoint.currentPower = parseFloat(item.power);
-      dataPoint.currentTemp = parseFloat(item.env_temp_cur);
-      
-      // Save to map
-      dataMap.set(timestamp, dataPoint);
-    });
-    
-    // Process future/predicted data points
-    data.forEach(item => {
-      const timestamp = new Date(item.future_timestamp).getTime();
-      const formattedTime = new Date(timestamp).toLocaleTimeString();
-      
-      // Initialize or get existing data point
-      const dataPoint = dataMap.get(timestamp) || {
-        timestamp,
-        timeLabel: formattedTime
-      };
-      
-      // Add predicted values
-      dataPoint.predictedPower = parseFloat(item.power_future_min);
-      dataPoint.predictedTemp = parseFloat(item.env_temp_min);
-      
-      // Save to map
-      dataMap.set(timestamp, dataPoint);
-    });
-    
-    // Convert map to array and sort by timestamp
-    return Array.from(dataMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+    const currentTimestamps = data.map(item => new Date(item.now_timestamp));
+    const futureTimestamps = data.map(item => new Date(item.future_timestamp));
+    const currentPower = data.map(item => parseFloat(item.power));
+    const predictedPower = data.map(item => parseFloat(item.power_future_min));
+    const currentTemp = data.map(item => parseFloat(item.env_temp_cur));
+    const predictedTemp = data.map(item => parseFloat(item.env_temp_min));
+
+    // Calculate min and max values for range sliders
+    const powerMin = Math.min(...currentPower, ...predictedPower);
+    const powerMax = Math.max(...currentPower, ...predictedPower);
+    const tempMin = Math.min(...currentTemp, ...predictedTemp);
+    const tempMax = Math.max(...currentTemp, ...predictedTemp);
+
+    const powerData: Partial<PlotData>[] = [
+      {
+        x: currentTimestamps,
+        y: currentPower,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Current Power',
+        line: { color: theme.palette.primary.main, width: 2 },
+        marker: { size: 6 }
+      },
+      {
+        x: futureTimestamps,
+        y: predictedPower,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Predicted Power',
+        line: { color: theme.palette.success.main, width: 2, dash: 'dash' },
+        marker: { size: 6 }
+      },
+      // Range slider trace
+      {
+        x: [...currentTimestamps, ...futureTimestamps],
+        y: Array(currentTimestamps.length + futureTimestamps.length).fill(0.5),
+        type: 'scatter',
+        mode: 'lines',
+        name: 'Y Range',
+        yaxis: 'y2',
+        line: { color: 'transparent' },
+        showlegend: false,
+        hoverinfo: 'skip' as const
+      }
+    ];
+
+    const tempData: Partial<PlotData>[] = [
+      {
+        x: currentTimestamps,
+        y: currentTemp,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Current Temperature',
+        line: { color: theme.palette.primary.main, width: 2 },
+        marker: { size: 6 }
+      },
+      {
+        x: futureTimestamps,
+        y: predictedTemp,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Predicted Temperature',
+        line: { color: theme.palette.success.main, width: 2, dash: 'dash' },
+        marker: { size: 6 }
+      },
+      // Range slider trace
+      {
+        x: [...currentTimestamps, ...futureTimestamps],
+        y: Array(currentTimestamps.length + futureTimestamps.length).fill(0.5),
+        type: 'scatter',
+        mode: 'lines',
+        name: 'Y Range',
+        yaxis: 'y2',
+        line: { color: 'transparent' },
+        showlegend: false,
+        hoverinfo: 'skip' as const
+      }
+    ];
+
+    return { 
+      powerData, 
+      tempData,
+      ranges: {
+        power: { min: powerMin, max: powerMax },
+        temp: { min: tempMin, max: tempMax }
+      }
+    };
   };
-  
-  // Format the chart data
-  const chartData = prepareChartData();
-  
-  // Find current time to display a marker between current and predicted data
-  const nowTimestamp = data.length > 0 
-    ? Math.max(...data.map(item => new Date(item.now_timestamp).getTime())) 
-    : null;
 
-  // Custom tooltip formatter for Recharts
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: 1.5,
-            bgcolor: 'rgba(255, 255, 255, 0.9)',
-            border: `1px solid ${theme.palette.divider}`
-          }}
-        >
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            {label}
-          </Typography>
-          {payload.map((entry: any, index: number) => (
-            <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-              <Box
-                component="span"
-                sx={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  backgroundColor: entry.color,
-                  display: 'inline-block',
-                  mr: 1
-                }}
-              />
-              <Typography variant="body2" color="text.secondary">
-                {entry.name}: {entry.value.toFixed(2)} {entry.unit}
-              </Typography>
-            </Box>
-          ))}
-        </Paper>
-      );
+  const { powerData, tempData, ranges } = preparePlotlyData();
+
+  // Common layout settings for both charts
+  const commonLayoutSettings: Partial<Layout> = {
+    showlegend: true,
+    legend: {
+      orientation: 'h',
+      y: -0.2,
+      x: 0.5,
+      xanchor: 'center',
+      yanchor: 'top',
+      font: {
+        size: 12,
+        family: theme.typography.fontFamily,
+        color: theme.palette.text.secondary
+      },
+      bgcolor: 'rgba(255, 255, 255, 0)',
+      bordercolor: 'rgba(255, 255, 255, 0)'
+    },
+    margin: { t: 60, b: 100, l: 60, r: 60 }, // Increased right margin for Y-axis range slider
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    hovermode: 'closest',
+    xaxis: {
+      type: 'date',
+      gridcolor: theme.palette.divider,
+      tickfont: { size: 12, color: theme.palette.text.secondary },
+      showgrid: true,
+      rangeslider: { visible: true }
+    },
+    yaxis2: {
+      overlaying: 'y',
+      side: 'right',
+      showgrid: false,
+      zeroline: false,
+      showticklabels: false,
+      range: [0, 1],
+      rangeslider: {
+        visible: true,
+        thickness: 0.1,
+        bgcolor: 'rgba(0,0,0,0)',
+        bordercolor: theme.palette.divider
+      }
     }
-    return null;
+  };
+
+  // Add handlers for zoom events
+  const handlePowerZoom = (event: any) => {
+    if (event['xaxis.range[0]']) {
+      setPowerZoom({
+        xRange: [new Date(event['xaxis.range[0]']).getTime(), new Date(event['xaxis.range[1]']).getTime()],
+        yRange: [event['yaxis.range[0]'], event['yaxis.range[1]']]
+      });
+    }
+  };
+
+  const handleTempZoom = (event: any) => {
+    if (event['xaxis.range[0]']) {
+      setTempZoom({
+        xRange: [new Date(event['xaxis.range[0]']).getTime(), new Date(event['xaxis.range[1]']).getTime()],
+        yRange: [event['yaxis.range[0]'], event['yaxis.range[1]']]
+      });
+    }
+  };
+
+  // Modify the power layout to use preserved zoom
+  const powerLayout: Partial<Layout> = {
+    ...commonLayoutSettings,
+    yaxis: {
+      title: 'Power (W)',
+      gridcolor: theme.palette.divider,
+      tickfont: { size: 12, color: theme.palette.text.secondary },
+      titlefont: { size: 14, color: theme.palette.text.primary },
+      showgrid: true,
+      rangemode: 'tozero',
+      fixedrange: false,
+      range: powerZoom.yRange || (ranges ? [ranges.power.min * 0.9, ranges.power.max * 1.1] : undefined)
+    },
+    xaxis: {
+      ...commonLayoutSettings.xaxis,
+      range: powerZoom.xRange ? [new Date(powerZoom.xRange[0]), new Date(powerZoom.xRange[1])] : undefined
+    }
+  };
+
+  // Modify the temperature layout to use preserved zoom
+  const tempLayout: Partial<Layout> = {
+    ...commonLayoutSettings,
+    yaxis: {
+      title: 'Temperature (°C)',
+      gridcolor: theme.palette.divider,
+      tickfont: { size: 12, color: theme.palette.text.secondary },
+      titlefont: { size: 14, color: theme.palette.text.primary },
+      showgrid: true,
+      rangemode: 'tozero',
+      fixedrange: false,
+      range: tempZoom.yRange || (ranges ? [ranges.temp.min * 0.9, ranges.temp.max * 1.1] : undefined)
+    },
+    xaxis: {
+      ...commonLayoutSettings.xaxis,
+      range: tempZoom.xRange ? [new Date(tempZoom.xRange[0]), new Date(tempZoom.xRange[1])] : undefined
+    }
+  };
+
+  // Common Plotly config with additional modebar buttons
+  const plotConfig: Partial<Config> = {
+    responsive: true,
+    displayModeBar: true,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['lasso2d', 'select2d'] as ('lasso2d' | 'select2d')[],
+    toImageButtonOptions: {
+      format: 'png' as const,
+      filename: 'temperature_monitoring',
+      height: 1000,
+      width: 1500,
+      scale: 2
+    }
+  };
+
+  // Handle temperature decision
+  const handleTemperatureDecision = async (approval: boolean) => {
+    try {
+      setDecisionLoading(true);
+      const response = await fetch('http://141.196.83.136:8003/prom/temperature/decisions?approval=' + approval, {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to send temperature decision: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      setAlert({
+        open: true,
+        message: result.message || `Temperature change ${approval ? 'approved' : 'declined'} successfully`,
+        severity: 'success'
+      });
+
+      // Refresh data after decision
+      await fetchData(true);
+    } catch (error) {
+      console.error('Error sending temperature decision:', error);
+      setAlert({
+        open: true,
+        message: error instanceof Error ? error.message : 'Failed to send temperature decision',
+        severity: 'error'
+      });
+    } finally {
+      setDecisionLoading(false);
+    }
+  };
+
+  const handleCloseAlert = () => {
+    setAlert(prev => ({ ...prev, open: false }));
   };
 
   return (
@@ -267,6 +429,54 @@ const Temperature = () => {
       </AppBar>
 
       <Box sx={{ p: { xs: 2, sm: 4 } }}>
+        {/* Temperature Decision Panel */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2,
+            mb: 3,
+            bgcolor: 'background.paper',
+            borderRadius: 2,
+            border: `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h6" sx={{ color: 'text.primary' }}>
+              Temperature Change Decision
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => handleTemperatureDecision(true)}
+                disabled={decisionLoading}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  minWidth: 120,
+                }}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<CancelIcon />}
+                onClick={() => handleTemperatureDecision(false)}
+                disabled={decisionLoading}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  minWidth: 120,
+                }}
+              >
+                Decline
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+
         <Fade in timeout={800}>
           <Grid container spacing={3}>
             {/* Power Chart */}
@@ -282,16 +492,32 @@ const Temperature = () => {
                   position: 'relative'
                 }}
               >
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    mb: 2, 
-                    color: theme.palette.text.primary, 
-                    fontWeight: 500 
-                  }}
-                >
-                  Power Consumption
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      color: theme.palette.text.primary, 
+                      fontWeight: 500 
+                    }}
+                  >
+                    Power Consumption
+                  </Typography>
+                  {data.length > 0 && (
+                    <Chip
+                      label={data[data.length - 1]?.flag || 'N/A'}
+                      color={data[data.length - 1]?.flag === '25' ? 'success' : 'warning'}
+                      size="medium"
+                      sx={{ 
+                        height: 32,
+                        '& .MuiChip-label': {
+                          px: 2,
+                          fontSize: '0.875rem',
+                          fontWeight: 600
+                        }
+                      }}
+                    />
+                  )}
+                </Box>
                 
                 {refreshing && (
                   <Box 
@@ -316,85 +542,20 @@ const Temperature = () => {
                       Loading power data...
                     </Typography>
                   </Box>
-                ) : chartData.length === 0 ? (
+                ) : data.length === 0 ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
                     <Typography variant="h6" color="text.secondary">No power data available</Typography>
                   </Box>
                 ) : (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <LineChart
-                      data={chartData}
-                      margin={{ top: 10, right: 30, left: 10, bottom: 55 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                      <XAxis 
-                        dataKey="timeLabel" 
-                        stroke={theme.palette.text.secondary} 
-                        angle={-45}
-                        textAnchor="end"
-                        tick={{ fontSize: 12 }}
-                        tickMargin={10}
-                      />
-                      <YAxis 
-                        stroke={theme.palette.text.secondary}
-                        label={{ 
-                          value: 'Power (W)', 
-                          angle: -90, 
-                          position: 'insideLeft',
-                          style: { textAnchor: 'middle', fill: theme.palette.text.secondary }
-                        }}
-                      />
-                      <RechartsTooltip content={<CustomTooltip />} />
-                      <Legend 
-                        verticalAlign="bottom" 
-                        height={36}
-                        wrapperStyle={{ paddingTop: '10px' }}
-                      />
-                      {nowTimestamp && (
-                        <ReferenceLine 
-                          x={chartData.find(item => item.timestamp === nowTimestamp)?.timeLabel} 
-                          stroke="#ff7300" 
-                          label={{ 
-                            value: "Now", 
-                            position: "top", 
-                            fill: "#ff7300",
-                            fontSize: 12
-                          }} 
-                        />
-                      )}
-                      <Line
-                        type="monotone"
-                        name="Current Power"
-                        dataKey="currentPower"
-                        stroke={theme.palette.primary.main}
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                        activeDot={{ r: 5 }}
-                        unit="W"
-                        connectNulls
-                      />
-                      <Line
-                        type="monotone"
-                        name="Predicted Power"
-                        dataKey="predictedPower"
-                        stroke={theme.palette.success.main}
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{ r: 3 }}
-                        activeDot={{ r: 5 }}
-                        unit="W"
-                        connectNulls
-                      />
-                      <Brush 
-                        dataKey="timeLabel" 
-                        height={30} 
-                        stroke={theme.palette.primary.light}
-                        y={365}
-                        travellerWidth={10}
-                        fill={theme.palette.background.paper}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <Box sx={{ height: 400 }}>
+                    <Plot
+                      data={powerData}
+                      layout={powerLayout}
+                      config={plotConfig}
+                      style={{ width: '100%', height: '100%' }}
+                      onRelayout={handlePowerZoom}
+                    />
+                  </Box>
                 )}
               </Paper>
             </Grid>
@@ -412,16 +573,32 @@ const Temperature = () => {
                   position: 'relative'
                 }}
               >
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    mb: 2, 
-                    color: theme.palette.text.primary, 
-                    fontWeight: 500 
-                  }}
-                >
-                  Environmental Temperature
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      color: theme.palette.text.primary, 
+                      fontWeight: 500 
+                    }}
+                  >
+                    Environmental Temperature
+                  </Typography>
+                  {data.length > 0 && (
+                    <Chip
+                      label={data[data.length - 1]?.flag || 'N/A'}
+                      color={data[data.length - 1]?.flag === '25' ? 'success' : 'warning'}
+                      size="medium"
+                      sx={{ 
+                        height: 32,
+                        '& .MuiChip-label': {
+                          px: 2,
+                          fontSize: '0.875rem',
+                          fontWeight: 600
+                        }
+                      }}
+                    />
+                  )}
+                </Box>
                 
                 {refreshing && (
                   <Box 
@@ -446,91 +623,43 @@ const Temperature = () => {
                       Loading temperature data...
                     </Typography>
                   </Box>
-                ) : chartData.length === 0 ? (
+                ) : data.length === 0 ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
                     <Typography variant="h6" color="text.secondary">No temperature data available</Typography>
                   </Box>
                 ) : (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <LineChart
-                      data={chartData}
-                      margin={{ top: 10, right: 30, left: 10, bottom: 55 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                      <XAxis 
-                        dataKey="timeLabel" 
-                        stroke={theme.palette.text.secondary} 
-                        angle={-45}
-                        textAnchor="end"
-                        tick={{ fontSize: 12 }}
-                        tickMargin={10}
-                      />
-                      <YAxis 
-                        stroke={theme.palette.text.secondary}
-                        label={{ 
-                          value: 'Temperature (°C)', 
-                          angle: -90, 
-                          position: 'insideLeft',
-                          style: { textAnchor: 'middle', fill: theme.palette.text.secondary }
-                        }}
-                      />
-                      <RechartsTooltip content={<CustomTooltip />} />
-                      <Legend 
-                        verticalAlign="bottom" 
-                        height={36}
-                        wrapperStyle={{ paddingTop: '10px' }}
-                      />
-                      {nowTimestamp && (
-                        <ReferenceLine 
-                          x={chartData.find(item => item.timestamp === nowTimestamp)?.timeLabel} 
-                          stroke="#ff7300" 
-                          label={{ 
-                            value: "Now", 
-                            position: "top", 
-                            fill: "#ff7300",
-                            fontSize: 12
-                          }} 
-                        />
-                      )}
-                      <Line
-                        type="monotone"
-                        name="Current Temperature"
-                        dataKey="currentTemp"
-                        stroke={theme.palette.primary.main}
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                        activeDot={{ r: 5 }}
-                        unit="°C"
-                        connectNulls
-                      />
-                      <Line
-                        type="monotone"
-                        name="Predicted Temperature"
-                        dataKey="predictedTemp"
-                        stroke={theme.palette.success.main}
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{ r: 3 }}
-                        activeDot={{ r: 5 }}
-                        unit="°C"
-                        connectNulls
-                      />
-                      <Brush 
-                        dataKey="timeLabel" 
-                        height={30} 
-                        stroke={theme.palette.primary.light}
-                        y={365}
-                        travellerWidth={10}
-                        fill={theme.palette.background.paper}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <Box sx={{ height: 400 }}>
+                    <Plot
+                      data={tempData}
+                      layout={tempLayout}
+                      config={plotConfig}
+                      style={{ width: '100%', height: '100%' }}
+                      onRelayout={handleTempZoom}
+                    />
+                  </Box>
                 )}
               </Paper>
             </Grid>
           </Grid>
         </Fade>
       </Box>
+
+      {/* Snackbar for alerts */}
+      <Snackbar
+        open={alert.open}
+        autoHideDuration={6000}
+        onClose={handleCloseAlert}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleCloseAlert}
+          severity={alert.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {alert.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

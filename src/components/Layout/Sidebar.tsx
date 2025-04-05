@@ -17,7 +17,6 @@ import ThermostatIcon from '@mui/icons-material/Thermostat';
 import BuildIcon from '@mui/icons-material/Build';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import MonitorIcon from '@mui/icons-material/Monitor';
 import bgreenLogo from '../../assets/bgreen-logo.png';
 
 const DRAWER_WIDTH = 240;
@@ -57,7 +56,6 @@ const menuItems = [
   { text: 'Environmental Temperature', path: '/temperature', icon: <ThermostatIcon /> },
   { text: 'Preventive Maintenance', path: '/maintenance', icon: <BuildIcon /> },
   { text: 'Migration Advice', path: '/migration', icon: <SwapHorizIcon /> },
-  { text: 'Monitoring System', path: '/monitoring-system', icon: <MonitorIcon /> },
 ];
 
 interface SidebarProps {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Paper, Typography, Fade, useTheme, AppBar, Toolbar } from '@mui/material';
+import { Box, Paper, Typography, Fade, useTheme, AppBar, Toolbar, Chip } from '@mui/material';
 import Plot from 'react-plotly.js';
 import { Layout, PlotData } from 'plotly.js';
 
@@ -12,21 +12,25 @@ interface DataItem {
   negative_3p: string;
   positive_7p: string;
   negative_7p: string;
+  flag: string;
 }
 
 const Maintenance = () => {
   const theme = useTheme();
   
   const [chartData, setChartData] = useState<Partial<PlotData>[]>([]);
+  const [currentFlag, setCurrentFlag] = useState<string>('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://141.196.83.136:8003/prom/get_chart_data/maintenance/');
+        const response = await fetch('http://141.196.83.136:8003/prom/get_chart_data/maintenance/20');
         const result = await response.json();
         
         if (result.data && result.data.length > 0) {
           const last20Data = result.data.slice(-20);
+          setCurrentFlag(last20Data[last20Data.length - 1].flag);
+          
           const traces: Partial<PlotData>[] = [
             {
               x: last20Data.map((item: DataItem) => item.now_timestamp),
@@ -105,7 +109,8 @@ const Maintenance = () => {
       gridcolor: '#eee',
       tickfont: { size: 12, family: undefined, color: '#666' },
       showgrid: true,
-      gridwidth: 1
+      gridwidth: 1,
+      rangeslider: { visible: true }
     },
     yaxis: {
       title: {
@@ -116,7 +121,9 @@ const Maintenance = () => {
       tickfont: { size: 12, family: undefined, color: '#666' },
       showgrid: true,
       gridwidth: 1,
-      rangemode: 'tozero' as const
+      rangemode: 'tozero' as const,
+      fixedrange: false,
+      range: [0, Math.max(...chartData.flatMap(trace => trace.y as number[]).filter(Boolean)) * 1.1]
     },
     showlegend: true,
     legend: {
@@ -169,6 +176,33 @@ const Maintenance = () => {
           >
             Preventive Maintenance
           </Typography>
+          {currentFlag && (
+            <Chip
+              label={currentFlag}
+              color={currentFlag === 'Correct Estimation for PM energy' ? 'success' : 'warning'}
+              size="medium"
+              sx={{ 
+                height: 32,
+                '& .MuiChip-label': {
+                  px: 2,
+                  fontSize: '0.875rem',
+                  fontWeight: 600
+                },
+                animation: 'pulse 2s infinite',
+                '@keyframes pulse': {
+                  '0%': {
+                    boxShadow: '0 0 0 0 rgba(0, 0, 0, 0.2)',
+                  },
+                  '70%': {
+                    boxShadow: '0 0 0 6px rgba(0, 0, 0, 0)',
+                  },
+                  '100%': {
+                    boxShadow: '0 0 0 0 rgba(0, 0, 0, 0)',
+                  },
+                }
+              }}
+            />
+          )}
         </Toolbar>
       </AppBar>
 

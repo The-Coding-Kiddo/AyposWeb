@@ -26,8 +26,18 @@ import SaveIcon from '@mui/icons-material/Save';
 interface TreeNode {
   id: string;
   name: string;
-  type: 'organization' | 'region' | 'datacenter' | 'pm' | 'vm';
+  type: 'organization' | 'region' | 'datacenter' | 'pm' | 'vm' | 'compute';
   children?: TreeNode[];
+  ip?: string;
+}
+
+interface ComputeNode {
+  host_ip: string;
+  hosted_vms: Record<string, string>;
+}
+
+interface ApiResponse {
+  optimization_space: Record<string, ComputeNode>;
 }
 
 // Helper function to get all descendant node IDs
@@ -68,160 +78,135 @@ const areAllChildrenSelected = (node: TreeNode, selectedNodes: string[]): boolea
   });
 };
 
-const MonitoringSystem = () => {
-  const [expanded, setExpanded] = useState<string[]>(['org1']);
+interface MonitoringSystemProps {
+  onSave?: (unselectedVMs: string[], selectedVMs: string[]) => void;
+  isDialog?: boolean;
+  initialBlockList?: string[];
+  initialSelectedVMs?: string[];
+}
+
+const MonitoringSystem = ({ onSave, isDialog = false, initialBlockList = [], initialSelectedVMs = [] }: MonitoringSystemProps) => {
+  const [expanded, setExpanded] = useState<string[]>(['org-main', 'region-main', 'dc-old-lab']);
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
+  const [isViewMode, setIsViewMode] = useState(false);
 
-  // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Updated mock data with three datacenters
-        const mockData: TreeNode = {
-          id: 'org1',
+  // Fetch data and initialize state
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://141.196.83.136:8003/prom/monitoring');
+      const result: ApiResponse = await response.json();
+      
+      // Create hierarchical structure
+      const hierarchicalData: TreeNode[] = [
+        {
+          id: 'org-main',
           name: 'Main Organization',
           type: 'organization',
           children: [
             {
-              id: 'region1',
-              name: 'Ankara',
+              id: 'region-main',
+              name: 'Region',
               type: 'region',
               children: [
                 {
-                  id: 'dc1',
+                  id: 'dc-ulak',
                   name: 'Ulak',
                   type: 'datacenter',
-                  children: [
-                    {
-                      id: 'pm1',
-                      name: 'Ulak PM 1',
-                      type: 'pm',
-                      children: [
-                        { id: 'vm1', name: 'Ulak VM 1', type: 'vm' },
-                        { id: 'vm2', name: 'Ulak VM 2', type: 'vm' },
-                        { id: 'vm3', name: 'Ulak VM 3', type: 'vm' },
-                      ],
-                    },
-                    {
-                      id: 'pm2',
-                      name: 'Ulak PM 2',
-                      type: 'pm',
-                      children: [
-                        { id: 'vm4', name: 'Ulak VM 4', type: 'vm' },
-                        { id: 'vm5', name: 'Ulak VM 5', type: 'vm' },
-                      ],
-                    },
-                    {
-                      id: 'pm3',
-                      name: 'Ulak PM 3',
-                      type: 'pm',
-                      children: [
-                        { id: 'vm6', name: 'Ulak VM 6', type: 'vm' },
-                        { id: 'vm7', name: 'Ulak VM 7', type: 'vm' },
-                        { id: 'vm8', name: 'Ulak VM 8', type: 'vm' },
-                      ],
-                    },
-                  ],
+                  children: [] // Empty for now
                 },
                 {
-                  id: 'dc2',
+                  id: 'dc-old-lab',
                   name: 'Old Lab',
                   type: 'datacenter',
-                  children: [
-                    {
-                      id: 'pm4',
-                      name: 'Old Lab PM 1',
-                      type: 'pm',
-                      children: [
-                        { id: 'vm9', name: 'Old Lab VM 1', type: 'vm' },
-                        { id: 'vm10', name: 'Old Lab VM 2', type: 'vm' },
-                        { id: 'vm11', name: 'Old Lab VM 3', type: 'vm' },
-                      ],
-                    },
-                    {
-                      id: 'pm5',
-                      name: 'Old Lab PM 2',
-                      type: 'pm',
-                      children: [
-                        { id: 'vm12', name: 'Old Lab VM 4', type: 'vm' },
-                        { id: 'vm13', name: 'Old Lab VM 5', type: 'vm' },
-                      ],
-                    },
-                    {
-                      id: 'pm6',
-                      name: 'Old Lab PM 3',
-                      type: 'pm',
-                      children: [
-                        { id: 'vm14', name: 'Old Lab VM 6', type: 'vm' },
-                        { id: 'vm15', name: 'Old Lab VM 7', type: 'vm' },
-                      ],
-                    },
-                  ],
+                  children: Object.entries(result.optimization_space).map(([computeName, computeData]) => ({
+                    id: computeName,
+                    name: computeName,
+                    type: 'compute',
+                    ip: computeData.host_ip,
+                    children: Object.entries(computeData.hosted_vms).map(([vmName, vmIp]) => ({
+                      id: `${computeName}-${vmName}`,
+                      name: vmName,
+                      type: 'vm',
+                      ip: vmIp
+                    }))
+                  }))
                 },
                 {
-                  id: 'dc3',
+                  id: 'dc-new-lab',
                   name: 'New Lab',
                   type: 'datacenter',
-                  children: [
-                    {
-                      id: 'pm7',
-                      name: 'New Lab PM 1',
-                      type: 'pm',
-                      children: [
-                        { id: 'vm16', name: 'New Lab VM 1', type: 'vm' },
-                        { id: 'vm17', name: 'New Lab VM 2', type: 'vm' },
-                        { id: 'vm18', name: 'New Lab VM 3', type: 'vm' },
-                      ],
-                    },
-                    {
-                      id: 'pm8',
-                      name: 'New Lab PM 2',
-                      type: 'pm',
-                      children: [
-                        { id: 'vm19', name: 'New Lab VM 4', type: 'vm' },
-                        { id: 'vm20', name: 'New Lab VM 5', type: 'vm' },
-                        { id: 'vm21', name: 'New Lab VM 6', type: 'vm' },
-                      ],
-                    },
-                    {
-                      id: 'pm9',
-                      name: 'New Lab PM 3',
-                      type: 'pm',
-                      children: [
-                        { id: 'vm22', name: 'New Lab VM 7', type: 'vm' },
-                        { id: 'vm23', name: 'New Lab VM 8', type: 'vm' },
-                        { id: 'vm24', name: 'New Lab VM 9', type: 'vm' },
-                      ],
-                    },
-                    {
-                      id: 'pm10',
-                      name: 'New Lab PM 4',
-                      type: 'pm',
-                      children: [
-                        { id: 'vm25', name: 'New Lab VM 10', type: 'vm' },
-                        { id: 'vm26', name: 'New Lab VM 11', type: 'vm' },
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
+                  children: [] // Empty for now
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      setTreeData(hierarchicalData);
+      
+      // Initialize selection based on initial values only if they exist
+      if (initialBlockList.length > 0 || initialSelectedVMs.length > 0) {
+        const blockList = initialBlockList;
+        
+        // Select nodes that are not in the block list
+        const nodesToSelect = new Set<string>();
+        
+        // Helper function to process compute nodes
+        const processComputeNodes = (nodes: TreeNode[]) => {
+          nodes.forEach(node => {
+            if (node.type === 'compute') {
+              let hasSelectedVM = false;
+              
+              // Check compute node
+              if (node.ip && !blockList.includes(node.ip)) {
+                nodesToSelect.add(node.id);
+              }
+              
+              // Check VM nodes
+              node.children?.forEach(vm => {
+                if (vm.ip && !blockList.includes(vm.ip)) {
+                  nodesToSelect.add(vm.id);
+                  hasSelectedVM = true;
+                }
+              });
+              
+              // If any VM is selected, ensure the compute is selected too
+              if (hasSelectedVM) {
+                nodesToSelect.add(node.id);
+              }
+            }
+            
+            // Recursively process children
+            if (node.children) {
+              processComputeNodes(node.children);
+            }
+          });
         };
 
-        setTreeData([mockData]);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+        // Process all nodes
+        processComputeNodes(hierarchicalData);
 
+        // Set the selected nodes
+        setSelectedNodes(Array.from(nodesToSelect));
+      }
+
+      // Expand organization and region nodes by default
+      setExpanded(['org-main', 'region-main', 'dc-old-lab']);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initialize with previous state
+  useEffect(() => {
     fetchData();
-  }, []);
+  }, [initialBlockList, initialSelectedVMs]); // Re-fetch when initial values change
 
   // Get appropriate icon for each node type
   const getNodeIcon = (type: TreeNode['type']) => {
@@ -271,24 +256,67 @@ const MonitoringSystem = () => {
         return null;
       };
 
+      // Find the parent compute node for a VM
+      const findParentCompute = (nodes: TreeNode[], vmId: string): TreeNode | null => {
+        for (const node of nodes) {
+          if (node.type === 'compute' && node.children?.some(vm => vm.id === vmId)) {
+            return node;
+          }
+          if (node.children) {
+            const found = findParentCompute(node.children, vmId);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
       const targetNode = findNode(treeData);
       if (!targetNode) return prev;
 
       if (isSelected) {
-        // When deselecting a node, deselect it and all its descendants
-        const descendantIds = getDescendantIds(targetNode);
-        newSelected = newSelected.filter(id => !descendantIds.includes(id));
+        // When deselecting a node
+        if (targetNode.type === 'compute') {
+          // If deselecting a compute, deselect all its VMs
+          const computeAndVMs = [targetNode.id, ...(targetNode.children?.map(vm => vm.id) || [])];
+          newSelected = newSelected.filter(id => !computeAndVMs.includes(id));
+        } else if (targetNode.type === 'vm') {
+          // If deselecting a VM, just deselect it
+          newSelected = newSelected.filter(id => id !== nodeId);
+          
+          // If this was the last VM, deselect the parent compute too
+          const parentCompute = findParentCompute(treeData, nodeId);
+          if (parentCompute) {
+            const siblingVMs = parentCompute.children?.filter(vm => vm.id !== nodeId) || [];
+            const hasSelectedSiblings = siblingVMs.some(vm => newSelected.includes(vm.id));
+            if (!hasSelectedSiblings) {
+              newSelected = newSelected.filter(id => id !== parentCompute.id);
+            }
+          }
+        }
       } else {
-        // When selecting a node, select it and all its descendants
-        const descendantIds = getDescendantIds(targetNode);
-        newSelected = [...new Set([...newSelected, ...descendantIds])];
+        // When selecting a node
+        if (targetNode.type === 'compute') {
+          // If selecting a compute, select all its VMs
+          newSelected.push(targetNode.id);
+          targetNode.children?.forEach(vm => {
+            newSelected.push(vm.id);
+          });
+        } else if (targetNode.type === 'vm') {
+          // If selecting a VM, select it and its parent compute
+          newSelected.push(nodeId);
+          const parentCompute = findParentCompute(treeData, nodeId);
+          if (parentCompute) {
+            newSelected.push(parentCompute.id);
+          }
+        }
       }
 
-      return newSelected;
+      // Remove duplicates and return
+      return Array.from(new Set(newSelected));
     });
   };
 
-  // Updated render function to remove the +All/-All button since it's redundant now
+  // Updated render function with disabled switches in view mode
   const renderTreeNode = (node: TreeNode, level: number = 0) => {
     const isExpanded = expanded.includes(node.id);
     const hasChildren = node.children && node.children.length > 0;
@@ -320,6 +348,7 @@ const MonitoringSystem = () => {
             <Switch
               checked={isSelected}
               onChange={() => handleNodeSelect(node.id)}
+              disabled={isViewMode}
               size="small"
               sx={{
                 ml: 1,
@@ -347,14 +376,58 @@ const MonitoringSystem = () => {
     );
   };
 
+  // Get unselected and selected VMs including compute IPs
+  const getVMSelectionStatus = () => {
+    const allIPs: string[] = [];
+    const selectedIPs: string[] = [];
+
+    // Find the Old Lab datacenter node that contains the dynamic data
+    const oldLabNode = treeData[0]?.children?.[0]?.children?.find(node => node.id === 'dc-old-lab');
+    if (!oldLabNode) return { selectedVMs: [], unselectedVMs: [] };
+
+    // Process only the compute nodes in Old Lab
+    oldLabNode.children?.forEach(compute => {
+      // Add compute IP
+      if (compute.ip) {
+        allIPs.push(compute.ip);
+        if (selectedNodes.includes(compute.id)) {
+          selectedIPs.push(compute.ip);
+        }
+      }
+
+      // Add VM IPs
+      compute.children?.forEach(vm => {
+        if (vm.ip) {
+          allIPs.push(vm.ip);
+          if (selectedNodes.includes(vm.id)) {
+            selectedIPs.push(vm.ip);
+          }
+        }
+      });
+    });
+
+    // Calculate unselected IPs for block list
+    const unselectedIPs = allIPs.filter(ip => !selectedIPs.includes(ip));
+
+    console.log('Block list IPs:', unselectedIPs);
+
+    return {
+      selectedVMs: selectedIPs,
+      unselectedVMs: unselectedIPs
+    };
+  };
+
   // Handle save action
   const handleSave = async () => {
     try {
       setLoading(true);
-      // This would be replaced with an actual API call
-      console.log('Selected nodes:', selectedNodes);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { selectedVMs, unselectedVMs } = getVMSelectionStatus();
+      console.log('Selected VMs and Computes:', selectedVMs);
+      console.log('Unselected VMs and Computes:', unselectedVMs);
+      
+      if (onSave) {
+        onSave(unselectedVMs, selectedVMs);
+      }
     } catch (error) {
       console.error('Error saving selection:', error);
     } finally {
@@ -362,23 +435,12 @@ const MonitoringSystem = () => {
     }
   };
 
-  // Handle refresh action
-  const handleRefresh = async () => {
-    try {
-      setLoading(true);
-      // This would be replaced with an actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // For now, just re-expand the root node
-      setExpanded(['org1']);
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <Box sx={{ 
+      height: isDialog ? 'auto' : '100vh', 
+      bgcolor: 'background.default',
+      p: 3
+    }}>
       {/* Header */}
       <AppBar 
         position="static" 
@@ -389,23 +451,43 @@ const MonitoringSystem = () => {
           borderColor: 'divider' 
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="h5" color="textPrimary" sx={{ flex: 1 }}>
             Optimization Space Selection
           </Typography>
+          {isDialog && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+              <Button
+                variant={isViewMode ? "contained" : "outlined"}
+                onClick={() => setIsViewMode(true)}
+                size="small"
+              >
+                View
+              </Button>
+              <Button
+                variant={!isViewMode ? "contained" : "outlined"}
+                onClick={() => setIsViewMode(false)}
+                size="small"
+              >
+                Edit
+              </Button>
+            </Box>
+          )}
           <Tooltip title="Save selected nodes">
-            <Button
-              startIcon={<SaveIcon />}
-              variant="contained"
-              onClick={handleSave}
-              disabled={selectedNodes.length === 0 || loading}
-              sx={{ mr: 1 }}
-            >
-              Save Selection
-            </Button>
+            <span>
+              <Button
+                startIcon={<SaveIcon />}
+                variant="contained"
+                onClick={handleSave}
+                disabled={loading || isViewMode}
+                sx={{ mr: 1 }}
+              >
+                Save
+              </Button>
+            </span>
           </Tooltip>
           <Tooltip title="Refresh tree">
-            <IconButton onClick={handleRefresh} disabled={loading}>
+            <IconButton onClick={fetchData} disabled={loading}>
               {loading ? <CircularProgress size={24} /> : <RefreshIcon />}
             </IconButton>
           </Tooltip>

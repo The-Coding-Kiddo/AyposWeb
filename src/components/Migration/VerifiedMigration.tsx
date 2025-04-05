@@ -86,7 +86,7 @@ const VerifiedMigration: React.FC<VerifiedMigrationProps> = ({
               justifyContent: 'center'
             }}>
               <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '0.875rem' }}>
-                Power Optimization Accuracy
+                Accuracy of migration proposal
               </Typography>
               <Typography variant="h4" sx={{ 
                 fontWeight: 'bold', 

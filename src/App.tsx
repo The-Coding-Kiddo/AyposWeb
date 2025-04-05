@@ -6,7 +6,6 @@ import Home from './pages/Home';
 import Temperature from './pages/Temperature';
 import Maintenance from './pages/Maintenance';
 import Migration from './pages/Migration';
-import MonitoringSystem from './pages/MonitoringSystem';
 
 function App() {
   return (
@@ -19,7 +18,6 @@ function App() {
             <Route path="/temperature" element={<Temperature />} />
             <Route path="/maintenance" element={<Maintenance />} />
             <Route path="/migration" element={<Migration />} />
-            <Route path="/monitoring-system" element={<MonitoringSystem />} />
           </Routes>
         </MainLayout>
       </Router>
