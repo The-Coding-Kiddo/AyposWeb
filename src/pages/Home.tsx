@@ -47,13 +47,14 @@ import DebugConsole from '../components/DebugConsole';
 import MonitoringSystem from './MonitoringSystem';
 
 const StyledCard = styled(Paper)(({ theme }) => ({
-  borderRadius: theme.spacing(2),
+  borderRadius: '0.357rem',
   padding: theme.spacing(3),
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
   backgroundColor: theme.palette.background.paper,
   transition: 'transform 0.2s, box-shadow 0.2s',
+  boxShadow: theme.shadows[3],
   '&:hover': {
     transform: 'translateY(-4px)',
     boxShadow: theme.shadows[8],
@@ -62,7 +63,8 @@ const StyledCard = styled(Paper)(({ theme }) => ({
 
 const StyledSelect = styled(Select)(({ theme }) => ({
   '& .MuiOutlinedInput-notchedOutline': {
-    borderRadius: theme.spacing(1.5),
+    borderRadius: '0.357rem',
+    borderColor: theme.palette.divider,
   },
   '&:hover .MuiOutlinedInput-notchedOutline': {
     borderColor: theme.palette.primary.main,
@@ -74,15 +76,16 @@ const SectionTitle = styled(Typography)(({ theme }) => ({
   alignItems: 'center',
   gap: theme.spacing(1),
   marginBottom: theme.spacing(3),
-  color: theme.palette.text.primary,
-  fontWeight: 600,
+  color: theme.palette.text.secondary,
+  fontWeight: 700,
+  fontFamily: theme.typography.fontFamily,
 }));
 
 const IconWrapper = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(0.5),
-  color: theme.palette.text.secondary,
+  color: theme.palette.text.primary,
   marginBottom: theme.spacing(1),
 }));
 
@@ -90,19 +93,20 @@ const WeightSlider = styled(Slider)(({ theme }) => ({
   '& .MuiSlider-thumb': {
     height: 24,
     width: 24,
-    backgroundColor: '#fff',
-    border: '2px solid currentColor',
+    backgroundColor: theme.palette.background.paper,
+    border: `2px solid ${theme.palette.primary.main}`,
     '&:focus, &:hover, &.Mui-active, &.Mui-focusVisible': {
       boxShadow: 'inherit',
     },
   },
   '& .MuiSlider-track': {
     height: 4,
+    backgroundColor: theme.palette.primary.main,
   },
   '& .MuiSlider-rail': {
     height: 4,
     opacity: 0.5,
-    backgroundColor: theme.palette.mode === 'dark' ? '#bfbfbf' : '#d8d8d8',
+    backgroundColor: theme.palette.divider,
   },
   '& .MuiSlider-mark': {
     backgroundColor: theme.palette.primary.main,
@@ -118,39 +122,28 @@ const WeightSlider = styled(Slider)(({ theme }) => ({
   },
 }));
 
-const WeightInput = styled(TextField)(() => ({
+const WeightInput = styled(TextField)(({ theme }) => ({
   width: 70,
   '& input': {
     padding: '8px',
     textAlign: 'center',
+    fontFamily: theme.typography.fontFamily,
   },
 }));
 
 const StatusChip = styled(Chip)(({ theme }) => ({
-  borderRadius: theme.spacing(1),
-  fontWeight: 500,
+  borderRadius: '0.357rem',
+  fontWeight: 600,
+  fontFamily: theme.typography.fontFamily,
   '&.running': {
-    backgroundColor: theme.palette.success.light,
-    color: theme.palette.success.dark,
+    backgroundColor: theme.palette.success.main,
+    color: theme.palette.common.white,
   },
   '&.stopped': {
-    backgroundColor: theme.palette.error.light,
-    color: theme.palette.error.dark,
+    backgroundColor: theme.palette.error.main,
+    color: theme.palette.common.white,
   },
 }));
-
-interface Weights {
-  energy: number;
-  balance: number;
-  overload: number;
-  allocation: number;
-}
-
-interface AlertState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error' | 'info' | 'warning';
-}
 
 const StatusCard = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -158,7 +151,7 @@ const StatusCard = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   gap: theme.spacing(1),
   padding: theme.spacing(2),
-  borderRadius: theme.shape.borderRadius * 2,
+  borderRadius: '0.357rem',
   backgroundColor: theme.palette.background.paper,
   boxShadow: theme.shadows[1],
   minWidth: 280,
@@ -174,12 +167,9 @@ const StatusIndicator = styled('div')(({ theme }) => ({
   height: 3,
   backgroundColor: 'transparent',
   '&.loading': {
-    background: `linear-gradient(90deg, 
-      ${theme.palette.primary.main}, 
-      ${theme.palette.primary.light}, 
-      ${theme.palette.primary.main})`,
+    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
     backgroundSize: '200% 100%',
-    animation: '$shimmer 2s infinite',
+    animation: 'shimmer 2s infinite',
   },
   '&.success': {
     backgroundColor: theme.palette.success.main,

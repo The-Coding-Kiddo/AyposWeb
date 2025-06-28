@@ -1,7 +1,6 @@
 import { 
   Box, 
   List, 
-  ListItem, 
   ListItemButton, 
   ListItemText, 
   styled, 
@@ -22,34 +21,82 @@ import bgreenLogo from '../../assets/bgreen-logo.png';
 
 const DRAWER_WIDTH = 240;
 
-const LogoContainer = styled(Box)(() => ({
+const LogoContainer = styled(Box)(({ theme }) => ({
   padding: '20px',
-  borderBottom: '1px solid rgba(255,255,255,0.1)',
-  background: 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%)',
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  background: theme.palette.background.paper,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
 }));
 
-const StyledListItemButton = styled(ListItemButton)(() => ({
-  margin: '4px 8px',
-  borderRadius: 4,
+const LogoText = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  fontWeight: 600,
+  letterSpacing: '0.5px',
+}));
+
+const LogoSubText = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.disabled,
+  display: 'block',
+  marginTop: '-2px',
+}));
+
+const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
+  borderRadius: '0.6rem',
+  backgroundColor: theme.palette.background.paper,
+  margin: '2px 8px',
+  transition: 'background 0.2s, box-shadow 0.2s',
+  boxShadow: 'none',
+  position: 'relative',
+  overflow: 'visible',
   '&.Mui-selected': {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    '&:hover': {
-      backgroundColor: 'rgba(255,255,255,0.15)',
+    background: 'linear-gradient(100deg, #028a4a 60%, #28c76f 100%)',
+    color: theme.palette.common.white,
+    boxShadow: '0 4px 24px 0 rgba(2,138,74,0.18)',
+    '&::after': {
+      content: '""',
+      position: 'absolute',
+      zIndex: 0,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      borderRadius: '0.6rem',
+      boxShadow: '0 0 24px 8px #28c76f33', // subtle green glow
+      pointerEvents: 'none',
     },
     '& .MuiListItemIcon-root': {
-      color: '#ffffff',
+      color: theme.palette.common.white,
+      zIndex: 1,
     },
     '& .MuiListItemText-primary': {
-      color: '#ffffff',
-      fontWeight: 500,
+      color: theme.palette.common.white,
+      fontWeight: 600,
+      zIndex: 1,
     },
   },
   '&:hover': {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: theme.palette.action.hover,
+    color: theme.palette.text.primary,
+    boxShadow: 'none',
+    '& .MuiListItemIcon-root': {
+      color: theme.palette.text.primary,
+    },
+    '& .MuiListItemText-primary': {
+      color: theme.palette.text.primary,
+    },
   },
+}));
+
+const MenuListContainer = styled(Box)(({ theme }) => ({
+  background: theme.palette.background.paper,
+  borderRadius: '0.6rem',
+  margin: '16px 8px 0 8px',
+  boxShadow: '0 2px 12px 0 rgba(44,62,80,0.04)',
+  padding: '4px 0',
+  display: 'flex',
+  flexDirection: 'column',
 }));
 
 const menuItems = [
@@ -92,49 +139,29 @@ const Sidebar = ({ open, onToggle, isMobile }: SidebarProps) => {
             }} 
           />
           <Box>
-            <Typography
-              variant="h6"
-              sx={{
-                color: '#ffffff',
-                fontWeight: 600,
-                letterSpacing: '0.5px',
-              }}
-            >
-              B'GREEN
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: 'rgba(255,255,255,0.7)',
-                display: 'block',
-                marginTop: '-2px',
-              }}
-            >
-              Monitor System
-            </Typography>
+            <LogoText variant="h6">B'GREEN</LogoText>
+            <LogoSubText variant="caption">Monitor System</LogoSubText>
           </Box>
         </Box>
         {isMobile && (
           <IconButton 
             onClick={onToggle}
-            sx={{ 
-              color: 'rgba(255,255,255,0.7)',
-              '&:hover': { color: '#ffffff' }
-            }}
+            sx={{ color: theme.palette.text.disabled, '&:hover': { color: theme.palette.text.secondary } }}
           >
             <ChevronLeftIcon />
           </IconButton>
         )}
       </LogoContainer>
 
-      <List sx={{ flexGrow: 1, mt: 2 }}>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
+      <MenuListContainer>
+        <List sx={{ flexGrow: 1, p: 0 }}>
+          {menuItems.map((item) => (
             <StyledListItemButton
+              key={item.text}
               selected={location.pathname === item.path}
               onClick={() => handleNavigation(item.path)}
             >
-              <ListItemIcon sx={{ color: 'rgba(255,255,255,0.7)', minWidth: 40 }}>
+              <ListItemIcon sx={{ color: theme.palette.text.secondary, minWidth: 40 }}>
                 {item.icon}
               </ListItemIcon>
               <ListItemText
@@ -142,14 +169,14 @@ const Sidebar = ({ open, onToggle, isMobile }: SidebarProps) => {
                 sx={{
                   '& .MuiListItemText-primary': {
                     fontSize: '0.9rem',
-                    color: 'rgba(255,255,255,0.7)',
+                    color: theme.palette.text.secondary,
                   },
                 }}
               />
             </StyledListItemButton>
-          </ListItem>
-        ))}
-      </List>
+          ))}
+        </List>
+      </MenuListContainer>
 
       <Box
         sx={{
@@ -185,7 +212,7 @@ const Sidebar = ({ open, onToggle, isMobile }: SidebarProps) => {
           display: { xs: 'block' },
           '& .MuiDrawer-paper': {
             width: DRAWER_WIDTH,
-            backgroundColor: theme.palette.primary.main,
+            backgroundColor: theme.palette.background.default,
             border: 'none',
             height: '100%',
           },
