@@ -20,6 +20,7 @@
     "axios": "^1.8.4",
     "chart.js": "^4.4.1",
     "date-fns": "^3.0.6",
+    "lucide-react": "^0.525.0",
     "plotly.js": "^3.0.1",
     "plotly.js-dist": "^3.0.1",
     "plotly.js-dist-min": "^3.0.1",

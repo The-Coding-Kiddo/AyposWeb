@@ -11,12 +11,10 @@ import {
   IconButton
 } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
-import HomeIcon from '@mui/icons-material/Home';
-import ThermostatIcon from '@mui/icons-material/Thermostat';
-import BuildIcon from '@mui/icons-material/Build';
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import { Home, Thermometer, Settings, ArrowUpDown, Zap } from 'lucide-react';
+
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import SpeedIcon from '@mui/icons-material/Speed';
+
 import bgreenLogo from '../../assets/bgreen-logo.png';
 
 const DRAWER_WIDTH = 240;
@@ -42,53 +40,35 @@ const LogoSubText = styled(Typography)(({ theme }) => ({
   marginTop: '-2px',
 }));
 
+
 const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
-  borderRadius: '0.6rem',
-  backgroundColor: theme.palette.background.paper,
-  margin: '2px 8px',
-  transition: 'background 0.2s, box-shadow 0.2s',
-  boxShadow: 'none',
-  position: 'relative',
-  overflow: 'visible',
+  borderRadius: '0.5rem',
+  margin: '4px 8px',
+  padding: '10px 12px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  fontFamily: 'Montserrat, sans-serif',
+  fontWeight: 500,
+  fontSize: '0.9rem',
+  color: theme.palette.text.secondary,
+  transition: 'all 0.2s ease',
+
   '&.Mui-selected': {
-    background: 'linear-gradient(100deg, #028a4a 60%, #28c76f 100%)',
-    color: theme.palette.common.white,
-    boxShadow: '0 4px 24px 0 rgba(2,138,74,0.18)',
-    '&::after': {
-      content: '""',
-      position: 'absolute',
-      zIndex: 0,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      borderRadius: '0.6rem',
-      boxShadow: '0 0 24px 8px #28c76f33', // subtle green glow
-      pointerEvents: 'none',
-    },
-    '& .MuiListItemIcon-root': {
-      color: theme.palette.common.white,
-      zIndex: 1,
-    },
-    '& .MuiListItemText-primary': {
-      color: theme.palette.common.white,
-      fontWeight: 600,
-      zIndex: 1,
+    background: '#028a4a',
+    color: '#ffffff',
+    '& .MuiListItemIcon-root svg': {
+      stroke: '#ffffff',
     },
   },
   '&:hover': {
-    backgroundColor: theme.palette.action.hover,
-    color: theme.palette.text.primary,
-    boxShadow: 'none',
-    '& .MuiListItemIcon-root': {
-      color: theme.palette.text.primary,
-    },
-    '& .MuiListItemText-primary': {
-      color: theme.palette.text.primary,
+    backgroundColor: '#f8f8f8',
+    color: '#028a4a',
+    '& .MuiListItemIcon-root svg': {
+      stroke: '#028a4a',
     },
   },
 }));
-
 const MenuListContainer = styled(Box)(({ theme }) => ({
   background: theme.palette.background.paper,
   borderRadius: '0.6rem',
@@ -100,13 +80,12 @@ const MenuListContainer = styled(Box)(({ theme }) => ({
 }));
 
 const menuItems = [
-  { text: 'Home', path: '/', icon: <HomeIcon /> },
-  { text: 'Environmental Temperature', path: '/temperature', icon: <ThermostatIcon /> },
-  { text: 'Preventive Maintenance', path: '/maintenance', icon: <BuildIcon /> },
-  { text: 'Migration Advice', path: '/migration', icon: <SwapHorizIcon /> },
-  { text: 'Stress Testing', path: '/stress-testing', icon: <SpeedIcon /> },
+  { text: 'Home', path: '/', icon: <Home size={18} /> },
+  { text: 'Environmental Temperature', path: '/temperature', icon: <Thermometer size={18} /> },
+  { text: 'Preventive Maintenance', path: '/maintenance', icon: <Settings size={18} /> },
+  { text: 'Migration Advice', path: '/migration', icon: <ArrowUpDown size={18} /> },
+  { text: 'Stress Testing', path: '/stress-testing', icon: <Zap size={18} /> },
 ];
-
 interface SidebarProps {
   open: boolean;
   onToggle: () => void;
@@ -161,9 +140,24 @@ const Sidebar = ({ open, onToggle, isMobile }: SidebarProps) => {
               selected={location.pathname === item.path}
               onClick={() => handleNavigation(item.path)}
             >
-              <ListItemIcon sx={{ color: theme.palette.text.secondary, minWidth: 40 }}>
-                {item.icon}
-              </ListItemIcon>
+              <ListItemIcon
+  sx={{
+    color: 'inherit',
+    minWidth: 0,
+    marginRight: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    '& svg': {
+      stroke: 'currentColor',
+      strokeWidth: 1.8,
+      width: 20,
+      height: 20,
+    },
+  }}
+>
+  {item.icon}
+</ListItemIcon>
               <ListItemText
                 primary={item.text}
                 sx={{
