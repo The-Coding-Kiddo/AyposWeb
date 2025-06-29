@@ -5,3 +5,4 @@ Code Comments: Some complex logic could benefit from more inline comments for ma
 Modularity: Some files (e.g., pages) are quite large and could be split into smaller, focused components.
 Environment Variables: API URLs are hardcoded in some places; best practice is to use environment variables for all endpoints.
 Accessibility: No explicit mention of accessibility (a11y) practices (e.g., ARIA labels, keyboard navigation).
+

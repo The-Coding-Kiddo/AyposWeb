@@ -60,12 +60,18 @@ const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
     '& .MuiListItemIcon-root svg': {
       stroke: '#ffffff',
     },
+    '& .MuiListItemText-primary': {
+      color: '#ffffff',
+    },
   },
   '&:hover': {
     backgroundColor: '#f8f8f8',
     color: '#028a4a',
     '& .MuiListItemIcon-root svg': {
       stroke: '#028a4a',
+    },
+    '& .MuiListItemText-primary': {
+      color: '#028a4a',
     },
   },
 }));
