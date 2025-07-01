@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { VMDetails, GainBeforeData, MigrationAdviceData } from './types';
 
-const API_BASE_URL = 'http://10.150.1.167:8003';
+const API_BASE_URL = 'http://141.196.166.241:8003';
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
 interface GainAfterData {

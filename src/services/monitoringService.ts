@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://10.150.1.167:8003';
+const BASE_URL = 'http://141.196.166.241:8003';
 
 export interface MonitoringConfig {
   migration: {

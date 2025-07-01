@@ -52,7 +52,7 @@ const Temperature = () => {
         setRefreshing(true);
       }
       
-      const response = await fetch('http://10.150.1.167:8003/prom/get_chart_data/temperature/20');
+      const response = await fetch('http://141.196.166.241:8003/prom/get_chart_data/temperature/20');
       const result = await response.json();
       
       if (result.data && result.data.length > 0) {
@@ -337,7 +337,7 @@ const Temperature = () => {
   const handleTemperatureDecision = async (approval: boolean) => {
     try {
       setDecisionLoading(true);
-      const response = await fetch('http://10.150.1.167:8003/prom/temperature/decisions?approval=' + approval, {
+      const response = await fetch('http://141.196.166.241:8003/prom/temperature/decisions?approval=' + approval, {
         method: 'POST',
         headers: {
           'accept': 'application/json',

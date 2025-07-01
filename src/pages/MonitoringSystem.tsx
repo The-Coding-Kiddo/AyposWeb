@@ -144,7 +144,7 @@ const MonitoringSystem: React.FC<MonitoringSystemProps> = ({
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://10.150.1.167:8003/prom/monitoring');
+      const response = await fetch('http://141.196.166.241:8003/prom/monitoring');
       const result: ApiResponse = await response.json();
       
       // Create hierarchical structure
