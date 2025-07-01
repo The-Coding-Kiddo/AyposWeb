@@ -112,7 +112,7 @@ const Test = () => {
     const fetchVMs = async () => {
       setIsLoadingVMs(true);
       try {
-        const response = await fetch('http://141.196.83.136:8003/prom/monitoring');
+        const response = await fetch('http://10.150.1.167:8003/prom/monitoring');
         const data: MonitoringResponse = await response.json();
         
         // Extract VMs from the optimization space

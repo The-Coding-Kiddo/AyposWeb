@@ -21,7 +21,7 @@ interface VMPlacementData {
   }>;
 }
 
-const ENDPOINT = 'http://141.196.83.136:8003/prom/get_chart_data/vm_placement';
+const ENDPOINT = 'http://10.150.1.167:8003/prom/get_chart_data/vm_placement';
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
 const SummaryStats: React.FC = () => {

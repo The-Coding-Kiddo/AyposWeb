@@ -24,7 +24,7 @@ const Maintenance = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://141.196.83.136:8003/prom/get_chart_data/maintenance/20');
+        const response = await fetch('http://10.150.1.167:8003/prom/get_chart_data/maintenance/20');
         const result = await response.json();
         
         if (result.data && result.data.length > 0) {

@@ -60,7 +60,7 @@ npm run preview
 
 ## API Configuration
 
-The application connects to an API server at `http://141.196.83.136:8003`. Make sure this endpoint is accessible from your network.
+The application connects to an API server at `http://10.150.1.167:8003`. Make sure this endpoint is accessible from your network.
 
 ## Environment Variables
 

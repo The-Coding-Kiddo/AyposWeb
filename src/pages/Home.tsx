@@ -46,19 +46,16 @@ import { monitoringService, MonitoringStatus } from '../services/monitoringServi
 import DebugConsole from '../components/DebugConsole';
 import MonitoringSystem from './MonitoringSystem';
 
+// Professional, consistent card style (no animation)
 const StyledCard = styled(Paper)(({ theme }) => ({
-  borderRadius: '0.357rem',
+  borderRadius: '0.6rem',
   padding: theme.spacing(3),
-  height: '100%',
+  minHeight: 260,
+  backgroundColor: theme.palette.background.paper,
+  boxShadow: theme.shadows[2],
   display: 'flex',
   flexDirection: 'column',
-  backgroundColor: theme.palette.background.paper,
-  transition: 'transform 0.2s, box-shadow 0.2s',
-  boxShadow: theme.shadows[3],
-  '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: theme.shadows[8],
-  },
+  justifyContent: 'flex-start',
 }));
 
 const StyledSelect = styled(Select)(({ theme }) => ({
@@ -71,14 +68,16 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   },
 }));
 
+// Professional header style
 const SectionTitle = styled(Typography)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1),
   marginBottom: theme.spacing(3),
-  color: theme.palette.text.secondary,
+  color: theme.palette.text.primary,
   fontWeight: 700,
-  fontFamily: theme.typography.fontFamily,
+  fontFamily: 'Montserrat, Helvetica, Arial, serif',
+  fontSize: theme.typography.h6.fontSize, // Use theme's h6 size (usually 1.125rem)
 }));
 
 const IconWrapper = styled(Box)(({ theme }) => ({
@@ -503,12 +502,12 @@ const Home = () => {
               View Optimization Selection
             </Button>
 
-            <Grid container spacing={3}>
+            <Grid container spacing={3} alignItems="stretch">
               {/* Environmental Temperature Section */}
-              <Grid item xs={12} md={2.7}>
-                <StyledCard elevation={3}>
-                  <SectionTitle variant="h6">
-                    <ThermostatIcon color="primary" fontSize="large" />
+              <Grid item xs={12} md={3}>
+                <StyledCard elevation={2}>
+                  <SectionTitle>
+                    <ThermostatIcon color="primary" fontSize="medium" />
                     Environmental Temperature
                   </SectionTitle>
                   
@@ -569,9 +568,9 @@ const Home = () => {
               </Grid>
 
               {/* Preventive Maintenance Section */}
-              <Grid item xs={12} md={2.7}>
-                <StyledCard elevation={3}>
-                  <SectionTitle variant="h6">
+              <Grid item xs={12} md={3}>
+                <StyledCard elevation={2}>
+                  <SectionTitle>
                     <BuildIcon color="primary" fontSize="large" />
                     Preventive Maintenance
                   </SectionTitle>
@@ -633,9 +632,9 @@ const Home = () => {
               </Grid>
 
               {/* Migration Advice Section */}
-              <Grid item xs={12} md={2.7}>
-                <StyledCard elevation={3}>
-                  <SectionTitle variant="h6">
+              <Grid item xs={12} md={3}>
+                <StyledCard elevation={2}>
+                  <SectionTitle>
                     <SwapHorizIcon color="primary" fontSize="large" />
                     Migration Advice
                   </SectionTitle>
@@ -746,10 +745,10 @@ const Home = () => {
               </Grid>
 
               {/* Weight Configuration Section */}
-              <Grid item xs={12} md={3.9}>
-                <StyledCard elevation={3}>
+              <Grid item xs={12} md={3}>
+                <StyledCard elevation={2}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <SectionTitle variant="h6" sx={{ mb: 0 }}>
+                    <SectionTitle sx={{ mb: 0 }}>
                       <BalanceIcon color="primary" fontSize="large" />
                       Weight Of Sustainability Criteria 
                     </SectionTitle>

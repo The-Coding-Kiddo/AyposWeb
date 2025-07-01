@@ -53,12 +53,15 @@ const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
   fontSize: '0.9rem',
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
-
   '&.Mui-selected': {
     background: '#028a4a',
     color: '#ffffff',
+    '& .MuiListItemIcon-root': {
+      color: '#ffffff',
+    },
     '& .MuiListItemIcon-root svg': {
       stroke: '#ffffff',
+      color: '#ffffff',
     },
     '& .MuiListItemText-primary': {
       color: '#ffffff',
@@ -67,8 +70,12 @@ const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
   '&:hover': {
     backgroundColor: '#f8f8f8',
     color: '#028a4a',
+    '& .MuiListItemIcon-root': {
+      color: '#028a4a',
+    },
     '& .MuiListItemIcon-root svg': {
       stroke: '#028a4a',
+      color: '#028a4a',
     },
     '& .MuiListItemText-primary': {
       color: '#028a4a',

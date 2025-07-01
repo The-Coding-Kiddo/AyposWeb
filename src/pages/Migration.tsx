@@ -31,7 +31,7 @@ import VerifiedMigration from '../components/Migration/VerifiedMigration';
 import { useMigrationData, useGainAfterData } from '../components/Migration/hooks';
 
 // Constants
-const API_BASE_URL = 'http://141.196.83.136:8003';
+const API_BASE_URL = 'http://10.150.1.167:8003';
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
 interface VMPlacementData {
@@ -413,7 +413,7 @@ const Migration = () => {
       setHasProgress(true);
       
       // First, send the POST request for migration approval
-      const approvalResponse = await fetch('http://141.196.83.136:8003/prom/migration/decisions4?run_migration=true', {
+      const approvalResponse = await fetch('http://10.150.1.167:8003/prom/migration/decisions4?run_migration=true', {
         method: 'POST',
         headers: {
           'accept': 'application/json'
@@ -455,7 +455,7 @@ const Migration = () => {
     try {
       setIsProcessing(true);
       
-      const response = await fetch('http://141.196.83.136:8003/prom/migration/decisions4?run_migration=false', {
+      const response = await fetch('http://10.150.1.167:8003/prom/migration/decisions4?run_migration=false', {
         method: 'POST',
         headers: {
           'accept': 'application/json'
