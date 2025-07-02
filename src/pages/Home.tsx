@@ -42,9 +42,10 @@ import ErrorIcon from '@mui/icons-material/Error';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import HandymanIcon from '@mui/icons-material/Handyman';
 import EditIcon from '@mui/icons-material/Edit';
-import { monitoringService, MonitoringStatus } from '../services/monitoringService';
+import { monitoringService } from '../services/monitoringService';
 import DebugConsole from '../components/DebugConsole';
 import MonitoringSystem from './MonitoringSystem';
+import { Weights, AlertState, MonitoringStatus } from '../types/monitoring';
 
 // Professional, consistent card style (no animation)
 const StyledCard = styled(Paper)(({ theme }) => ({
@@ -890,10 +891,19 @@ const Home = () => {
                       const config = {
                         migration: {
                           script_time_unit: migrationTime,
-                          estimation_method: estimationMethod,
-                          model_type: migrationModel,
-                          migration_method: migrationMethod === 'mathematical' ? 'migration_advices_la' : 'migration_advices_llm',
-                          operation_mode: migrationMode,
+                          virtual_machine_estimation: {
+                            estimation_method: estimationMethod,
+                            model_type: migrationModel
+                          },
+                          migration_advices: {
+                            migration_method: migrationMethod === 'mathematical' ? 'migration_advices_la' : 'migration_advices_llm',
+                            migration_weights: {
+                              power: weights.energy.toString(),
+                              balance: weights.balance.toString(),
+                              overload: weights.overload.toString(),
+                              allocation: weights.allocation.toString()
+                            }
+                          },
                           block_list: blockList
                         },
                         environmental: {

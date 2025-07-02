@@ -26,12 +26,6 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import ComputerIcon from '@mui/icons-material/Computer';
 import { stressService } from '../services/stressService';
 
-const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  borderRadius: theme.spacing(2),
-  height: '100%',
-}));
-
 const PageTitle = styled(Typography)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',

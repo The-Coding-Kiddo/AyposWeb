@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -11,19 +11,8 @@ import {
   CircularProgress,
   Tooltip,
   Collapse,
-  Grid,
-  useTheme,
-  styled,
-  Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControlLabel,
   Alert,
   Snackbar,
-  Tabs,
-  Tab,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -34,8 +23,6 @@ import ComputerIcon from '@mui/icons-material/Computer';
 import MemoryIcon from '@mui/icons-material/Memory';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
-import SpeedIcon from '@mui/icons-material/Speed';
-import { stressService } from '../services/stressService';
 
 // Define the structure of our tree nodes
 interface TreeNode {
@@ -93,27 +80,6 @@ const areAllChildrenSelected = (node: TreeNode, selectedNodes: string[]): boolea
   });
 };
 
-// Add new styled components for stress testing
-const StressTestingCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  borderRadius: theme.spacing(2),
-  backgroundColor: theme.palette.background.paper,
-  marginBottom: theme.spacing(3),
-}));
-
-const StressLevelChip = styled(Chip)<{ level: 'low' | 'medium' | 'high' }>(({ theme, level }) => ({
-  borderRadius: theme.spacing(1),
-  fontWeight: 500,
-  backgroundColor: 
-    level === 'low' ? theme.palette.success.light :
-    level === 'medium' ? theme.palette.warning.light :
-    theme.palette.error.light,
-  color: 
-    level === 'low' ? theme.palette.success.dark :
-    level === 'medium' ? theme.palette.warning.dark :
-    theme.palette.error.dark,
-}));
-
 interface MonitoringSystemProps {
   onSave?: (unselectedVMs: string[], selectedVMs: string[]) => void;
   isDialog?: boolean;
@@ -132,8 +98,6 @@ const MonitoringSystem: React.FC<MonitoringSystemProps> = ({
   const [loading, setLoading] = useState(false);
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
   const [isViewMode, setIsViewMode] = useState(false);
-  const [selectedVMs, setSelectedVMs] = useState<string[]>(initialSelectedVMs);
-  const [activeTab, setActiveTab] = useState(0);
   const [alert, setAlert] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
     open: false,
     message: '',
