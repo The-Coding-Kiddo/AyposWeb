@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { VMDetails, GainBeforeData, MigrationAdviceData } from './types';
+import { config } from '../../config/env';
 
-const API_BASE_URL = 'http://141.196.166.241:8003';
+const API_BASE_URL = config.apiUrl;
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
 interface GainAfterData {
@@ -23,13 +24,20 @@ export const useMigrationData = () => {
     try {
       setIsLoadingGainData(true);
       
+      // Log the request start
+      console.log('Fetching migration data...');
+      
       const [gainResponse, migrationResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/prom/get_chart_data/gain_before`),
         fetch(`${API_BASE_URL}/prom/get_chart_data/migration`)
       ]);
 
+      // Log the response status
+      console.log('Gain Response Status:', gainResponse.status);
+      console.log('Migration Response Status:', migrationResponse.status);
+
       if (!gainResponse.ok || !migrationResponse.ok) {
-        throw new Error('Failed to fetch migration data');
+        throw new Error(`Failed to fetch migration data: Gain Status ${gainResponse.status}, Migration Status ${migrationResponse.status}`);
       }
 
       const [gainData, migrationData] = await Promise.all([
@@ -37,10 +45,26 @@ export const useMigrationData = () => {
         migrationResponse.json()
       ]);
 
+      // Log the received data
+      console.log('Received Gain Data:', gainData);
+      console.log('Received Migration Data:', migrationData);
+
+      if (!gainData || typeof gainData.cur_power === 'undefined') {
+        console.error('Invalid gain data format:', gainData);
+        throw new Error('Invalid gain data format');
+      }
+
+      if (!migrationData || Object.keys(migrationData).length === 0) {
+        console.warn('No migration advice available:', migrationData);
+      }
+
       setGainBeforeData(gainData);
       setMigrationAdviceData(migrationData);
     } catch (error) {
       console.error('Error fetching migration data:', error);
+      // Clear the data on error to prevent showing stale data
+      setGainBeforeData(null);
+      setMigrationAdviceData(null);
     } finally {
       setIsLoadingGainData(false);
     }

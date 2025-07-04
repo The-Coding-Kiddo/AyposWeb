@@ -69,3 +69,21 @@ No additional environment variables are required to run the application in devel
 ## Browser Support
 
 The application is optimized for modern browsers that support ES6+ features.
+
+## Environment Configuration
+
+The application uses environment variables for configuration. To set up your environment:
+
+1. Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` and set your environment variables:
+```env
+VITE_API_URL=http://your-api-server:port
+```
+
+The following environment variables are available:
+
+- `VITE_API_URL`: The URL of the API server (default: http://141.196.166.241:8003)

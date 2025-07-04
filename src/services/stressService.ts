@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { config } from '../config/env';
 
-const BASE_URL = 'http://141.196.166.241:8003';
+const BASE_URL = config.apiUrl;
 
 export interface StressConfig {
   vms: string[];

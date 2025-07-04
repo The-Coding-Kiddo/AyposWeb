@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Box, Paper, Typography, Fade, useTheme, AppBar, Toolbar, Chip } from '@mui/material';
 import Plot from 'react-plotly.js';
 import { Layout, PlotData } from 'plotly.js';
+import { config } from '../config/env';
 
 interface DataItem {
   now_timestamp: string;
@@ -15,6 +16,8 @@ interface DataItem {
   flag: string;
 }
 
+const API_BASE_URL = config.apiUrl;
+
 const Maintenance = () => {
   const theme = useTheme();
   
@@ -24,7 +27,7 @@ const Maintenance = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://141.196.166.241:8003/prom/get_chart_data/maintenance/20');
+        const response = await fetch(`${API_BASE_URL}/prom/get_chart_data/maintenance/20`);
         const result = await response.json();
         
         if (result.data && result.data.length > 0) {

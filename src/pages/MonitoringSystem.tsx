@@ -23,6 +23,9 @@ import ComputerIcon from '@mui/icons-material/Computer';
 import MemoryIcon from '@mui/icons-material/Memory';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
+import { config } from '../config/env';
+
+const API_BASE_URL = config.apiUrl;
 
 // Define the structure of our tree nodes
 interface TreeNode {
@@ -108,7 +111,7 @@ const MonitoringSystem: React.FC<MonitoringSystemProps> = ({
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://141.196.166.241:8003/prom/monitoring');
+      const response = await fetch(`${API_BASE_URL}/prom/monitoring`);
       const result: ApiResponse = await response.json();
       
       // Create hierarchical structure

@@ -5,6 +5,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import Plot from 'react-plotly.js';
 import { Layout, PlotData, Config } from 'plotly.js';
+import { config } from '../config/env';
 
 // Extend the Window interface to include Google Charts
 declare global {
@@ -25,6 +26,8 @@ interface ChartData {
   env_temp_min: string;
   power_future_min: string;
 }
+
+const API_BASE_URL = config.apiUrl;
 
 const Temperature = () => {
   const theme = useTheme();
@@ -52,7 +55,7 @@ const Temperature = () => {
         setRefreshing(true);
       }
       
-      const response = await fetch('http://141.196.166.241:8003/prom/get_chart_data/temperature/20');
+      const response = await fetch(`${API_BASE_URL}/prom/get_chart_data/temperature/20`);
       const result = await response.json();
       
       if (result.data && result.data.length > 0) {
@@ -337,7 +340,7 @@ const Temperature = () => {
   const handleTemperatureDecision = async (approval: boolean) => {
     try {
       setDecisionLoading(true);
-      const response = await fetch('http://141.196.166.241:8003/prom/temperature/decisions?approval=' + approval, {
+      const response = await fetch(`${API_BASE_URL}/prom/temperature/decisions?approval=${approval}`, {
         method: 'POST',
         headers: {
           'accept': 'application/json',

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Grid, Paper, Typography, Box, Divider } from '@mui/material';
 import StorageIcon from '@mui/icons-material/Storage';
 import ComputerIcon from '@mui/icons-material/Computer';
+import { config } from '../../config/env';
 
 interface VM {
   name: string;
@@ -21,7 +22,7 @@ interface VMPlacementData {
   }>;
 }
 
-const ENDPOINT = 'http://141.196.166.241:8003/prom/get_chart_data/vm_placement';
+const ENDPOINT = `${config.apiUrl}/prom/get_chart_data/vm_placement`;
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
 const SummaryStats: React.FC = () => {

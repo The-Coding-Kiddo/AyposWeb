@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { config } from '../config/env';
 
-const BASE_URL = 'http://141.196.166.241:8003';
+const BASE_URL = config.apiUrl;
 
 export interface MonitoringConfig {
   migration: {
@@ -71,11 +72,46 @@ class MonitoringService {
         throw new Error('Invalid configuration: Missing required sections');
       }
 
-      // Ensure script_time_unit has valid values
-      if (!config.migration.script_time_unit || 
-          !config.environmental.script_time_unit || 
-          !config.preventive.script_time_unit) {
-        throw new Error('Invalid configuration: Missing script_time_unit values');
+      // Validate migration configuration
+      const { migration } = config;
+      if (!migration.script_time_unit || 
+          !migration.virtual_machine_estimation ||
+          !migration.migration_advices ||
+          !migration.block_list) {
+        throw new Error('Invalid migration configuration: Missing required fields');
+      }
+
+      // Validate estimation configuration
+      const { virtual_machine_estimation } = migration;
+      if (!virtual_machine_estimation.estimation_method || !virtual_machine_estimation.model_type) {
+        throw new Error('Invalid estimation configuration: Missing required fields');
+      }
+
+      // Validate migration advice configuration
+      const { migration_advices } = migration;
+      if (!migration_advices.migration_method || !migration_advices.migration_weights) {
+        throw new Error('Invalid migration advice configuration: Missing required fields');
+      }
+
+      // Validate weights
+      const { migration_weights } = migration_advices;
+      if (!migration_weights.power || !migration_weights.balance || 
+          !migration_weights.overload || !migration_weights.allocation) {
+        throw new Error('Invalid weights configuration: Missing required fields');
+      }
+
+      // Validate environmental configuration
+      if (!config.environmental.script_time_unit || 
+          !config.environmental.number_of_steps ||
+          !config.environmental.model_type) {
+        throw new Error('Invalid environmental configuration: Missing required fields');
+      }
+
+      // Validate preventive configuration
+      if (!config.preventive.script_time_unit || 
+          !config.preventive.number_of_steps ||
+          !config.preventive.model_type) {
+        throw new Error('Invalid preventive configuration: Missing required fields');
       }
 
       // Log the configuration being sent
@@ -103,7 +139,9 @@ class MonitoringService {
         throw new Error(`Failed to start monitoring: Status ${response.status}`);
       }
 
-      console.log('Monitoring started successfully:', response.data);
+      // Log the response data
+      console.log('Monitoring started successfully. Response:', response.data);
+      
       return;
     } catch (error) {
       if (axios.isCancel(error)) {

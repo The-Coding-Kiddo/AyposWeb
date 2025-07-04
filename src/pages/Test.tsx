@@ -25,6 +25,7 @@ import ScienceIcon from '@mui/icons-material/Science';
 import SpeedIcon from '@mui/icons-material/Speed';
 import ComputerIcon from '@mui/icons-material/Computer';
 import { stressService } from '../services/stressService';
+import { config } from '../config/env';
 
 const PageTitle = styled(Typography)(({ theme }) => ({
   display: 'flex',
@@ -78,6 +79,8 @@ interface VM {
   ip: string;
 }
 
+const API_BASE_URL = config.apiUrl;
+
 const Test = () => {
   const [stressLevel, setStressLevel] = useState<'low' | 'medium' | 'high'>('low');
   const [stressedVMs, setStressedVMs] = useState<string[]>([]);
@@ -106,7 +109,7 @@ const Test = () => {
     const fetchVMs = async () => {
       setIsLoadingVMs(true);
       try {
-        const response = await fetch('http://141.196.166.241:8003/prom/monitoring');
+        const response = await fetch(`${API_BASE_URL}/prom/monitoring`);
         const data: MonitoringResponse = await response.json();
         
         // Extract VMs from the optimization space
