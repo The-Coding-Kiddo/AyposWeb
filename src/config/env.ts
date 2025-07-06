@@ -1,6 +1,10 @@
 // Environment configuration
 const getApiUrl = (): string => {
-  // Use environment variable if available, fallback to development URL
+  // In production (Vercel), use the proxied path
+  if (import.meta.env.PROD) {
+    return '/api';
+  }
+  // In development, use the direct URL
   return import.meta.env.VITE_API_URL || 'http://141.196.166.241:8003';
 };
 

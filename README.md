@@ -58,18 +58,6 @@ npm run preview
 - Resource Distribution Visualization
 - System Maintenance
 
-## API Configuration
-
-The application connects to an API server at `http://141.196.166.241:8003`. Make sure this endpoint is accessible from your network.
-
-## Environment Variables
-
-No additional environment variables are required to run the application in development mode.
-
-## Browser Support
-
-The application is optimized for modern browsers that support ES6+ features.
-
 ## Environment Configuration
 
 The application uses environment variables for configuration. To set up your environment:
@@ -84,6 +72,6 @@ cp .env.example .env
 VITE_API_URL=http://your-api-server:port
 ```
 
-The following environment variables are available:
+## Browser Support
 
-- `VITE_API_URL`: The URL of the API server (default: http://141.196.166.241:8003)
+The application is optimized for modern browsers that support ES6+ features.
